@@ -153,3 +153,19 @@ test("word library finds accentless queries and uses the selected word in a dril
   await page.locator("#launchSosDrillBtn").click();
   await expect(page.locator("#targetWord")).toHaveText("ČIAPKA");
 });
+
+test("shop asks about payment and follows the selected response", async ({ page }) => {
+  await open(page);
+  await page.locator("#sidebarTabRozhovory").click();
+  await page.getByRole("button", { name: "V predajni", exact: true }).click();
+  await page.getByRole("button", { name: "Začať rozhovor", exact: true }).click();
+  const first = await page.evaluate(() => lessonScenario());
+  expect(first.promptText).toBe("V hotovosti alebo kartou?");
+  expect(first.audioUrl).toContain("glide-shop-opening-v2.mp3");
+  expect(await page.evaluate(() => window.GlideConversation.interpret("shop", "v hotovosti"))).toBe(1);
+  await speak(page, "Kartou, prosím");
+  await page.locator("#drawerContinueBtn").click();
+  const next = await page.evaluate(() => lessonScenario());
+  expect(next.promptText).toBe("Dobre, môžete priložiť kartu.");
+  expect(next.audioUrl).toContain("glide-shop-card-v2.mp3");
+});

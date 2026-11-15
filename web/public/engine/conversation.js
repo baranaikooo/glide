@@ -8,8 +8,8 @@
       avatar: "☕",
       voiceGender: "female",
       goal: "Objednaj si dve kávy a povedz, či ich chceš tu alebo so sebou.",
-      opening: "Dobrý deň, vitajte v kaviarni. Čo vám môžem pripraviť?",
-      audioUrl: "/audio/scenarios/glide-cafe-opening.mp3",
+      opening: "Dobrý deň, čo si dáte?",
+      audioUrl: "/audio/scenarios/glide-cafe-opening-v2.mp3",
       branches: [
         [
           "So sebou",
@@ -65,23 +65,15 @@
       caller: "Predavač",
       avatar: "🛍️",
       voiceGender: "male",
-      goal: "Vysvetli, s čím potrebuješ pomôcť pri nákupe alebo reklamácii.",
-      opening: "Predajňa, prosím.",
-      audioUrl: "/audio/scenarios/glide-shop-opening.mp3",
+      goal: "Odpovedz, ako chceš zaplatiť.",
+      opening: "V hotovosti alebo kartou?",
+      audioUrl: "/audio/scenarios/glide-shop-opening-v2.mp3",
       branches: [
-        [
-          "Reklamácia alebo výmena",
-          /\breklam\w*\b|\bvymen\w*\b|\bvratit\b/,
-          "Rozumiem. Môžete mi opísať, čo sa s výrobkom stalo?",
-        ],
-        [
-          "Hľadanie výrobku",
-          /\bhladam\b|\bkde\b|\bmáte\b|\bmate\b/,
-          "Môžete mi povedať, aký typ alebo veľkosť hľadáte?",
-        ],
-        ["Upresniť požiadavku", null, "Môžete mi povedať trochu viac o tom, čo potrebujete?"],
+        ["Kartou", /\bkart\w*\b/, "Dobre, môžete priložiť kartu."],
+        ["V hotovosti", /\bhotovost\w*\b|\bcash\b/, "Dobre, zaplatíte v hotovosti."],
+        ["Upresniť platbu", null, "Prosím vás, ako chcete zaplatiť?"],
       ],
-      closing: "Chcete ešte niečo doplniť, kým to uzavrieme?",
+      closing: "Ďakujem pekne, dovidenia.",
     },
     own: {
       title: "Vlastná situácia",
@@ -150,7 +142,7 @@
   const recordedLines = {
     cafe: { branches: ["cafe-branch-takeaway", "cafe-branch-table", "cafe-branch-coffee", "cafe-branch-clarify"], closing: "cafe-close" },
     doctor: { branches: ["doctor-branch-book", "doctor-branch-change", "doctor-branch-clarify"], closing: "doctor-close" },
-    shop: { branches: ["shop-branch-return", "shop-branch-search", "shop-branch-clarify"], closing: "shop-close" },
+    shop: { branches: ["shop-card-v2", "shop-cash-v2", "shop-clarify-v2"], closing: "shop-close-v2" },
     own: { branches: ["own-branch-details", "own-branch-other", "own-branch-clarify"], closing: "own-close" },
   };
   const recordedUrl = (id) => "/audio/scenarios/glide-" + id + ".mp3";

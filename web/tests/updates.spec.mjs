@@ -46,6 +46,7 @@ test('Android offers the exact newer APK immediately on launch, fits phones and 
   const box = await page.locator('#appUpdateNotice').boundingBox();
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(320);
+  expect(box.height).toBeLessThanOrEqual(180);
   await page.locator('#downloadAppUpdate').click();
   expect(await page.evaluate(() => window.updateTest.downloads)).toEqual([
     'https://github.com/baranaikooo/glide/releases/download/v1.0.2/glide-native.apk',
@@ -53,7 +54,7 @@ test('Android offers the exact newer APK immediately on launch, fits phones and 
   await expect(page.locator('#appUpdateHelp')).toContainText('Po stiahnutí otvor APK');
   await page.locator('#dismissAppUpdate').click();
   await expect(page.locator('#appUpdateNotice')).toBeHidden();
-  await page.locator('#navTabTelemetria').click();
+  await page.locator('#headerProfileBtn').click();
   await page.locator('#checkAppUpdate').click();
   await expect(page.locator('#appUpdateNotice')).toBeVisible();
 });

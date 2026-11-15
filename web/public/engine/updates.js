@@ -22,7 +22,7 @@
   notice.className = "app-update-notice";
   notice.hidden = true;
   notice.setAttribute("aria-labelledby", "appUpdateTitle");
-  notice.innerHTML = '<strong id="appUpdateTitle">Je dostupná nová verzia Glide</strong><p id="appUpdateVersion" role="status"></p><p id="appUpdateHelp">Stiahni APK a otvor ho. Aktualizáciu potvrdíš v Androide; tvoj postup zostane zachovaný.</p><div class="app-update-actions"><button id="downloadAppUpdate" type="button" class="btn-3d green">Stiahnuť aktualizáciu</button><button id="dismissAppUpdate" type="button" class="btn-3d">Neskôr</button></div>';
+  notice.innerHTML = '<strong id="appUpdateTitle">Je dostupná nová verzia Glide</strong><p id="appUpdateVersion" role="status"></p><p id="appUpdateHelp">Po stiahnutí otvor súbor a potvrď aktualizáciu.</p><div class="app-update-actions"><button id="downloadAppUpdate" type="button" class="btn-3d green">Aktualizovať</button><button id="dismissAppUpdate" type="button" class="btn-3d">Neskôr</button></div>';
   document.body.appendChild(notice);
   const downloadButton = notice.querySelector("#downloadAppUpdate");
   const help = notice.querySelector("#appUpdateHelp");

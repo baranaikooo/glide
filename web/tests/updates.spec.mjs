@@ -47,6 +47,10 @@ test('Android offers the exact newer APK immediately on launch, fits phones and 
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(320);
   expect(box.height).toBeLessThanOrEqual(180);
+  expect(Math.abs(box.x - (320 - box.x - box.width))).toBeLessThanOrEqual(1);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const wideBox = await page.locator("#appUpdateNotice").boundingBox();
+  expect(Math.abs(wideBox.x - (390 - wideBox.x - wideBox.width))).toBeLessThanOrEqual(1);
   await page.locator('#downloadAppUpdate').click();
   expect(await page.evaluate(() => window.updateTest.downloads)).toEqual([
     'https://github.com/baranaikooo/glide/releases/download/v1.0.2/glide-native.apk',

@@ -9,7 +9,10 @@
   position: fixed;
   z-index: 30000;
   top: calc(12px + var(--safe-top));
+  left: calc(12px + var(--safe-left));
   right: calc(12px + var(--safe-right));
+  margin-inline: auto;
+  box-sizing: border-box;
   width: min(340px, calc(100vw - 24px - var(--safe-left) - var(--safe-right)));
   max-height: calc(100dvh - 24px - var(--safe-top) - var(--safe-bottom));
   overflow-y: auto;

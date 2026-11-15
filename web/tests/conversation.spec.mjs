@@ -54,9 +54,11 @@ test("café rehearsal follows both responses and recommends a next scene from th
   await speak(page, "Dve veľké kávy");
   await page.locator("#drawerContinueBtn").click();
   expect(await page.evaluate(() => lessonScenario().promptText)).toContain("Dve kávy");
+  expect(await page.evaluate(() => lessonScenario().audioUrl)).toContain("glide-cafe-branch-coffee.mp3");
   await speak(page, "so sebou");
   await page.locator("#drawerContinueBtn").click();
   expect(await page.evaluate(() => lessonScenario().promptText)).toContain("Zabalím");
+  expect(await page.evaluate(() => lessonScenario().audioUrl)).toContain("glide-cafe-close-takeaway.mp3");
   await speak(page, "Áno, ďakujem");
   await page.locator("#drawerContinueBtn").click();
   await expect(page.locator("#celebrationTitle")).toHaveText("Rozhovor dokončený");

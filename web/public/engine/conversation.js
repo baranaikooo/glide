@@ -147,6 +147,14 @@
     return voices[index];
   }
 
+  const recordedLines = {
+    cafe: { branches: ["cafe-branch-takeaway", "cafe-branch-table", "cafe-branch-coffee", "cafe-branch-clarify"], closing: "cafe-close" },
+    doctor: { branches: ["doctor-branch-book", "doctor-branch-change", "doctor-branch-clarify"], closing: "doctor-close" },
+    shop: { branches: ["shop-branch-return", "shop-branch-search", "shop-branch-clarify"], closing: "shop-close" },
+    own: { branches: ["own-branch-details", "own-branch-other", "own-branch-clarify"], closing: "own-close" },
+  };
+  const recordedUrl = (id) => "/audio/scenarios/glide-" + id + ".mp3";
+
   function create(sceneId, goal) {
     const scene = scenes[sceneId];
     const openingAudio = scene.openingVoices ? takeDoctorVoice(scene.openingVoices) : scene.audioUrl;
@@ -165,8 +173,8 @@
       waitingForChoice: false,
       tasks: [
         { word: "Začni rozhovor", question: question(scene.opening, openingAudio) },
-        { word: "Reaguj vlastnými slovami", question: question(scene.branches.at(-1)[2]) },
-        { word: "Ukonči rozhovor", question: question(scene.closing) },
+        { word: "Reaguj vlastnými slovami", question: question(scene.branches.at(-1)[2], recordedUrl(recordedLines[sceneId].branches.at(-1))) },
+        { word: "Ukonči rozhovor", question: question(scene.closing, recordedUrl(recordedLines[sceneId].closing)) },
       ].map((task) => ({ ...task, freeReply: true, attempts: 0 })),
     };
   }
@@ -458,10 +466,14 @@
     if (!plan || !result.passed) return;
     if (lesson.completedItemsCount === 2 && plan.sceneId === "cafe") {
       const closing = lesson.lessonQueue[0]?.question;
-      if (closing && result.conversationChoice === 0)
+      if (closing && result.conversationChoice === 0) {
         closing.promptText = "Zabalím vám objednávku so sebou. Je to všetko?";
-      if (closing && result.conversationChoice === 1)
+        closing.audioUrl = recordedUrl("cafe-close-takeaway");
+      }
+      if (closing && result.conversationChoice === 1) {
         closing.promptText = "Prinesiem vám objednávku k stolu. Je to všetko?";
+        closing.audioUrl = recordedUrl("cafe-close-table");
+      }
     }
     if (lesson.completedItemsCount !== 1) return;
     const scene = scenes[plan.sceneId];
@@ -471,6 +483,7 @@
       const branch = scene.branches[index];
       if (!branch || !next) return;
       next.question.promptText = branch[2];
+      next.question.audioUrl = recordedUrl(recordedLines[plan.sceneId].branches[index]);
       plan.waitingForChoice = false;
       continueButton.disabled = false;
       choiceBox.hidden = true;

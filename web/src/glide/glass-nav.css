@@ -97,3 +97,5 @@
   }
 }
 .profile-tab-trigger[hidden] { display: none !important; }
+#bottomNav .nav-icon {display:grid;place-items:center;width:24px;height:24px;flex:0 0 24px;}
+#bottomNav .nav-icon svg {display:block;width:20px;height:20px;}

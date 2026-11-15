@@ -1655,7 +1655,7 @@ class DuoLessonController {
 
     if (context && this.currentLevel) {
       const remaining = this.lessonQueue.length;
-      context.textContent = this.conversation ? `${this.conversation.title} · ${Math.min(3, this.completedItemsCount + 1)} z 3` : this.isSosDrill
+      context.textContent = this.conversation ? `${this.conversation.title} · ${Math.min(this.initialWordCount, this.completedItemsCount + 1)} z ${this.initialWordCount}` : this.isSosDrill
         ? `⚡ SOS Dril • Zostáva pokusov: ${remaining}`
         : `${this.currentLevel.title} • Zostáva: ${remaining}`;
     }

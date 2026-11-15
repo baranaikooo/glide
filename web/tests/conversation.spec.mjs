@@ -183,10 +183,10 @@ test("conversation alternates voice and closing question between attempts", asyn
   }
 });
 
-test("optional ambience can be muted and stops on audio release", async ({ page }) => {
+test("ambience starts automatically and stops on audio release", async ({ page }) => {
   await open(page);
   await page.locator("#sidebarTabRozhovory").click();
-  await page.locator("#conversationAmbience").check();
+  await expect(page.locator("#conversationAmbience, #conversationAmbienceVolume")).toHaveCount(0);
   await page.getByRole("button", { name: "Začať rozhovor", exact: true }).click();
   const state = await page.evaluate(() => {
     const players = [];
@@ -196,12 +196,34 @@ test("optional ambience can be muted and stops on audio release", async ({ page 
       pause() { this.paused = true; }
     };
     GlideConversation.startAmbience(duoLesson.conversation);
-    document.querySelector(".conversation-ambience-mute").click();
-    const result = { count: players.length, volume: players[0].volume, muted: players[0].muted };
+    GlideConversation.startAmbience(duoLesson.conversation);
+    const result = { count: players.length, volume: players[0].volume, played: players[0].played, loop: players[0].loop };
     window.releaseGlideAudio();
     result.paused = players[0].paused;
-    result.hidden = document.querySelector(".conversation-ambience-mute").hidden;
     return result;
   });
-  expect(state).toEqual({ count: 1, volume: 0.05, muted: true, paused: true, hidden: true });
+  expect(state).toEqual({ count: 1, volume: 0.05, played: true, loop: true, paused: true });
+});
+
+test("additional question appears after completed practice and accepted replies", async ({ page }) => {
+  await open(page);
+  await page.evaluate(() => localStorage.setItem("glide_conversations_v1_guest:simulations-completed", "2"));
+  await page.locator("#sidebarTabRozhovory").click();
+  await page.getByRole("button", { name: "Začať rozhovor", exact: true }).click();
+  expect(await page.evaluate(() => duoLesson.conversation.bonusEligible)).toBe(true);
+  await speak(page, "Dve veľké kávy");
+  await page.locator("#drawerContinueBtn").click();
+  await speak(page, "so sebou");
+  await page.locator("#drawerContinueBtn").click();
+  await speak(page, "Áno, ďakujem");
+  await page.locator("#drawerContinueBtn").click();
+  const bonus = await page.evaluate(() => ({ question: lessonScenario(), count: duoLesson.initialWordCount }));
+  expect(bonus.count).toBe(4);
+  expect(bonus.question.promptText).toBe("Ešte sa spýtam, chcete kávu s mliekom?");
+  expect(bonus.question.audioUrl).toContain("glide-cafe-surprise");
+  await expect(page.locator("#lessonContextBadge")).toContainText("4 z 4");
+  await speak(page, "Nie, ďakujem");
+  await page.locator("#drawerContinueBtn").click();
+  await expect(page.locator("#celebrationTitle")).toHaveText("Rozhovor dokončený");
+  expect(await page.evaluate(() => localStorage.getItem("glide_conversations_v1_guest:simulations-completed"))).toBe("3");
 });

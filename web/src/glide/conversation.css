@@ -120,10 +120,3 @@
 .conversation-surface[data-mode="life"] .conversation-pending strong {font-size:17px;}
 .conversation-surface[data-mode="life"] .conversation-pending span:last-child {margin-top:4px;color:var(--purple-hover);font-weight:700;}
 
-.conversation-ambience-options { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--surface-border); border-radius: 16px; }
-.conversation-ambience-options .conversation-ambience-toggle { display: flex; align-items: center; gap: 9px; }
-.conversation-dialog .conversation-ambience-toggle input { width: 18px; height: 18px; padding: 0; accent-color: #8b5cf6; }
-.conversation-ambience-volume { display: grid; gap: 5px; }
-.conversation-dialog .conversation-ambience-volume input { padding: 0; accent-color: #8b5cf6; }
-.conversation-ambience-mute { border: 1px solid var(--surface-border); border-radius: 999px; padding: 8px 12px; background: var(--bg); color: var(--ink); }
-.conversation-ambience-mute[hidden] { display: none; }

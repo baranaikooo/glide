@@ -153,6 +153,12 @@
     shop: "Prosíte si aj bloček?",
     own: "Je ešte niečo, čo by ste chceli doplniť?",
   };
+  const surpriseQuestions = {
+    cafe: "Ešte sa spýtam, chcete kávu s mliekom?",
+    doctor: "Ešte sa spýtam, ktorý deň vám najviac vyhovuje?",
+    shop: "Ešte sa spýtam, potrebujete tašku?",
+    own: "Ešte mi povedzte, kedy by vám to vyhovovalo?",
+  };
   const alternateOpenings = {
     cafe: "cafe-opening-v2-alt",
     shop: "shop-opening-v2-alt",
@@ -177,6 +183,8 @@
   function create(sceneId, goal) {
     const scene = scenes[sceneId];
     const turn = nextTurn(sceneId);
+    const completed = completedSimulations();
+    const bonusEligible = completed >= 2 && completed % 2 === 0;
     const openingAudio = scene.openingVoices
       ? takeDoctorVoice(scene.openingVoices)
       : turn ? recordedUrl(alternateOpenings[sceneId]) : scene.audioUrl;
@@ -196,8 +204,7 @@
       waitingForChoice: false,
       alternateVoice,
       alternateQuestion: !!turn,
-      ambience: byId("conversationAmbience").checked,
-      ambienceVolume: Number(byId("conversationAmbienceVolume").value),
+      bonusEligible,
       tasks: [
         { word: "Začni rozhovor", question: question(scene.opening, openingAudio) },
         { word: "Reaguj vlastnými slovami", question: question(scene.branches.at(-1)[2], recordedUrl(recordedLines[sceneId].branches.at(-1) + (alternateVoice ? "-alt" : ""))) },
@@ -225,10 +232,6 @@
       <select id="conversationScene" data-glide-select="scene-cards" aria-label="Situácia" aria-hidden="true" tabindex="-1" class="conversation-scene-select"></select>
       <label for="conversationGoal">Čo chceš povedať alebo vybaviť?</label>
       <textarea id="conversationGoal" maxlength="140" rows="2" required></textarea>
-      <div class="conversation-ambience-options">
-        <label class="conversation-ambience-toggle"><input id="conversationAmbience" type="checkbox"> Jemný ruch v pozadí</label>
-        <label class="conversation-ambience-volume" for="conversationAmbienceVolume">Hlasitosť ruchu <input id="conversationAmbienceVolume" type="range" min="0" max="15" value="5"></label>
-      </div>
       <button class="btn-3d green full" id="conversationStart">Začať rozhovor</button>
     </form>
     <button type="button" id="conversationPending" class="conversation-pending" hidden><span>Tvoj plán</span><strong id="conversationPendingTitle"></strong><span id="conversationPendingGoal"></span><span>Zaznamenať, ako to dopadlo →</span></button>
@@ -285,6 +288,11 @@
   const key = () =>
     "glide_conversations_v1_" + (window.fluencyAuth?.getCurrentUser()?.id || "guest");
   const draftKey = () => key() + ":plan";
+  const simulationKey = () => key() + ":simulations-completed";
+  function completedSimulations() {
+    try { return Math.max(0, Number.parseInt(localStorage.getItem(simulationKey()), 10) || 0); }
+    catch { return 0; }
+  }
   for (const [id, label] of [
     ["Before", "Ako sa cítiš pred rozhovorom?"],
     ["After", "Ako sa cítiš po rozhovore?"],
@@ -487,39 +495,24 @@
 
   let ambienceAudio = null;
   let ambiencePlan = null;
-  const ambienceButton = document.createElement("button");
-  ambienceButton.type = "button";
-  ambienceButton.className = "conversation-ambience-mute";
-  ambienceButton.hidden = true;
-  document.querySelector(".lesson-toggles")?.append(ambienceButton);
-  ambienceButton.onclick = () => {
-    if (!ambienceAudio) return;
-    ambienceAudio.muted = !ambienceAudio.muted;
-    ambienceButton.textContent = ambienceAudio.muted ? "Zapnúť ruch" : "Stíšiť ruch";
-    ambienceButton.setAttribute("aria-pressed", String(ambienceAudio.muted));
-  };
   function stopAmbience() {
     if (ambienceAudio) { ambienceAudio.pause(); ambienceAudio.currentTime = 0; }
     ambienceAudio = null;
     ambiencePlan = null;
-    ambienceButton.hidden = true;
   }
   function startAmbience(plan) {
-    if (!plan?.ambience || ambiencePlan === plan) return;
+    if (!plan || document.hidden || ambiencePlan === plan) return;
     stopAmbience();
     ambiencePlan = plan;
     ambienceAudio = new Audio(plan.sceneId === "cafe" || plan.sceneId === "shop"
       ? "/audio/scenarios/glide-cafe-ambience.mp3" : "/audio/scenarios/glide-room-ambience.mp3");
     ambienceAudio.loop = true;
-    ambienceAudio.volume = Math.max(0, Math.min(15, Number(plan.ambienceVolume) || 0)) / 100;
-    ambienceButton.textContent = "Stíšiť ruch";
-    ambienceButton.setAttribute("aria-pressed", "false");
-    ambienceButton.hidden = false;
+    ambienceAudio.volume = 0.05;
     const player = ambienceAudio;
     player.play().catch(() => { if (ambienceAudio === player) stopAmbience(); });
   }
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden && ambiencePlan) { ambiencePlan.ambience = false; stopAmbience(); }
+    if (document.hidden) stopAmbience();
   });
 
   function reset() {
@@ -533,6 +526,20 @@
   function afterAttempt(lesson, result) {
     const plan = lesson.conversation;
     if (!plan || !result.passed) return;
+    // Progress reflects completed conversations and captured responses, not fluency.
+    if (plan.bonusEligible && !plan.bonusAdded && lesson.completedItemsCount === 3 &&
+        lesson.totalAttemptsCount === 3 && lesson.lessonQueue.length === 0) {
+      const scene = scenes[plan.sceneId];
+      plan.bonusAdded = true;
+      lesson.lessonQueue.push({
+        word: "Odpovedz na doplňujúcu otázku",
+        question: { category: "conversation", caller: scene.caller, avatar: scene.avatar,
+          voiceGender: scene.voiceGender, promptText: surpriseQuestions[plan.sceneId],
+          audioUrl: lineUrl(plan, plan.sceneId + "-surprise") },
+        freeReply: true, attempts: 0,
+      });
+      lesson.initialWordCount++;
+    }
     if (lesson.completedItemsCount === 2 && plan.sceneId === "cafe" && !plan.alternateQuestion) {
       const closing = lesson.lessonQueue[0]?.question;
       if (closing && result.conversationChoice === 0) {
@@ -587,6 +594,10 @@
     reset,
     showRecap(plan) {
       stopAmbience();
+      if (plan && !plan.completionRecorded) {
+        plan.completionRecorded = true;
+        try { localStorage.setItem(simulationKey(), String(completedSimulations() + 1)); } catch (_) {}
+      }
       recap.hidden = !plan;
     },
   };

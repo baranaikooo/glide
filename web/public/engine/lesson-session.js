@@ -152,6 +152,41 @@
     },
   ];
 
+  const demoTypes = ["onset", "linking", "contact", "pause", "conversation"];
+  const demoCaptions = ["a → áno", "m → á → máme", "pery → hlas", "časť vety · pauza · ďalšia časť", "počúvam → odpovedám"];
+  let demoPlayer = null;
+  function stopDemo() {
+    if (demoPlayer) { demoPlayer.pause(); demoPlayer.currentTime = 0; demoPlayer = null; }
+  }
+  function renderDemo(container, index) {
+    const example = techniqueExamples[index];
+    container.replaceChildren();
+    if (!example) return;
+    const visual = document.createElement("div"); visual.className = "technique-visual"; visual.dataset.technique = demoTypes[index];
+    visual.innerHTML = '<div class="technique-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div><span></span>';
+    visual.querySelector("span").textContent = demoCaptions[index];
+    const button = document.createElement("button"); button.type = "button"; button.className = "technique-audio"; button.textContent = "▶ Vypočuť príklad";
+    const info = document.createElement("small"); info.className = "technique-audio-info";
+    info.textContent = "Animácia znázorňuje postup. Hlas je prirodzená výslovnosť príkladu, techniku si skús podľa seba.";
+    button.onclick = () => {
+      if (document.body.classList.contains("in-lesson") && document.getElementById("startBtn")?.disabled) { info.textContent = "Príklad si môžeš prehrať pred ďalším pokusom."; return; }
+      stopDemo(); const audio = demoPlayer = new Audio(`/audio/scenarios/glide-technique-${demoTypes[index]}.mp3`);
+      audio.onended = () => { if (demoPlayer === audio) demoPlayer = null; };
+      audio.play().catch(() => { if (demoPlayer === audio) { demoPlayer = null; info.textContent = "Ukážku sa nepodarilo prehrať. Postup si môžeš prečítať vyššie."; } });
+    };
+    container.append(visual, button, info);
+  }
+  document.getElementById("startBtn")?.addEventListener("click", stopDemo, true);
+  document.getElementById("exitLessonBtn")?.addEventListener("click", stopDemo, true);
+  document.getElementById("popoverCloseBtn")?.addEventListener("click", stopDemo, true);
+  document.getElementById("startLessonBtn")?.addEventListener("click", stopDemo, true);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) stopDemo(); });
+  const activeTechnique = document.createElement("details");
+  activeTechnique.id = "activeTechniqueDemo"; activeTechnique.className = "active-technique-demo"; activeTechnique.hidden = true;
+  activeTechnique.innerHTML = '<summary>Ukážka techniky ✨</summary><strong></strong><ol class="lesson-technique-steps"></ol><p></p><div></div>';
+  document.getElementById("targetMeta")?.after(activeTechnique);
+  activeTechnique.addEventListener("toggle", () => { if (!activeTechnique.open) stopDemo(); });
+
   function describe(level) {
     const count = document.getElementById("popoverWordCount");
     const start = document.getElementById("startLessonBtn");
@@ -170,6 +205,7 @@
     if (!example) return;
     document.getElementById("lessonTechniqueTitle").textContent = example.title;
     document.getElementById("lessonTechniqueHint").textContent = example.hint;
+    renderDemo(document.getElementById("lessonTechniqueDemo"), Number(level.id.split(".")[0]) - 1);
     document.getElementById("lessonTechniqueSteps").replaceChildren(
       ...example.steps.map((step) => {
         const item = document.createElement("li");
@@ -227,6 +263,18 @@
   model.loadNextItem = function () {
     next();
     if (!this.isSosDrill && this.pathSession && this.isLessonActive) {
+      const demoIndex = Number(this.currentLevel?.id?.split(".")[0]) - 1;
+      const demo = techniqueExamples[demoIndex];
+      activeTechnique.hidden = !demo;
+      activeTechnique.open = false;
+      const hintSummary = document.querySelector(".lesson-hint > summary");
+      if (hintSummary) hintSummary.textContent = demo ? "Tip a ukážka techniky" : "Tip k cvičeniu";
+      if (demo) {
+        activeTechnique.querySelector("strong").textContent = demo.title;
+        activeTechnique.querySelector("p").textContent = demo.hint;
+        activeTechnique.querySelector("ol").replaceChildren(...demo.steps.map(step => { const item = document.createElement("li"); item.textContent = step; return item; }));
+        renderDemo(activeTechnique.querySelector("div"), demoIndex);
+      }
       save(this);
       const item = this.currentWordItem;
       const eyebrow = document.querySelector(".lesson-eyebrow");
@@ -239,6 +287,9 @@
         document.getElementById("targetWord").textContent = item.word;
       repeat.hidden = true;
     } else {
+      activeTechnique.hidden = true;
+      const hintSummary = document.querySelector(".lesson-hint > summary");
+      if (hintSummary) hintSummary.textContent = "Tip k cvičeniu";
       pauseButton.hidden = true;
       repeat.hidden = true;
       document.getElementById("lessonScreen").removeAttribute("data-task-kind");

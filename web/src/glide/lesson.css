@@ -127,3 +127,16 @@
 .lesson-hint summary::after {content:"⌄";margin-left:8px;font-size:16px;}
 .lesson-hint[open] summary::after {transform:rotate(180deg);}
 @media(max-height:680px){.lesson-mic-status{padding:4px 9px;font-size:11px}.lesson-hint summary{min-height:34px;padding:4px 12px}}
+.technique-visual { display:flex; align-items:center; gap:12px; min-height:62px; margin:10px 0 8px; padding:8px 12px; border:1px solid var(--surface-border); border-radius:14px; background:var(--lavender-soft); color:var(--purple-hover); font-size:12px; font-weight:700; }
+.technique-wave { display:flex; align-items:center; justify-content:center; gap:3px; width:55px; height:38px; flex-shrink:0; }
+.technique-wave i { display:block; width:5px; height:8px; border-radius:99px; background:var(--purple); animation:technique-pulse 2.6s ease-in-out infinite; transform-origin:center; }
+.technique-wave i:nth-child(2) { height:14px; animation-delay:.14s; }.technique-wave i:nth-child(3) { height:21px; animation-delay:.28s; }.technique-wave i:nth-child(4) { height:15px; animation-delay:.42s; }.technique-wave i:nth-child(5) { height:9px; animation-delay:.56s; }
+.technique-visual[data-technique="pause"] .technique-wave i:nth-child(3) { animation:none; height:4px; opacity:.35; }
+.technique-visual[data-technique="contact"] .technique-wave i:nth-child(-n+2) { animation-delay:.5s; }
+.technique-audio { display:inline-flex; align-items:center; min-height:40px; padding:8px 12px; border:1px solid var(--surface-border); border-radius:12px; background:var(--surface); color:var(--purple-hover); font:inherit; font-size:12px; font-weight:700; }
+.technique-audio-info { display:block; margin:6px 0; color:var(--text-muted); font-size:11px; line-height:1.4; }
+.active-technique-demo { width:min(100%,390px); margin:4px auto; padding:9px 12px; border:1px solid var(--surface-border); border-radius:14px; background:var(--surface); text-align:left; }
+.active-technique-demo[hidden] { display:none; }.active-technique-demo summary { cursor:pointer; color:var(--purple-hover); font-size:12px; font-weight:700; }.active-technique-demo strong,.active-technique-demo p { display:block; margin:6px 0; font-size:12px; line-height:1.4; }
+@keyframes technique-pulse { 0%,100% { transform:scaleY(.45); opacity:.55; } 50% { transform:scaleY(1.2); opacity:1; } }
+@media (prefers-reduced-motion: reduce) { .technique-wave i { animation:none!important; transform:none; } }
+@media(max-height:680px) { .lesson-screen .pacer-wrapper { min-height:110px; } }

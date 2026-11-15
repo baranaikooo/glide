@@ -757,7 +757,7 @@ if (startBtn) {
     const meta = analyzePhonetics(w);
     meta.freeReply = !!lesson?.currentWordItem?.freeReply || currentMode === "guillotine" || currentMode === "ambush";
 
-    meta.conversation = lesson?.conversation && lesson.completedItemsCount < 2 ? lesson.conversation.sceneId : null;
+    meta.conversation = lesson?.conversation && !lesson.conversation.miniActivity && lesson.completedItemsCount < 2 ? lesson.conversation.sceneId : null;
     if (meta.conversation || (meta.targetText && !meta.freeReply)) await window.GlidePhrase.prepare(audioCtx);
     if (generation !== dspStartGeneration) return;
     if (currentMode === "standard") {

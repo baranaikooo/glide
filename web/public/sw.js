@@ -1,4 +1,4 @@
-const CACHE = "glide-light-v46";
+const CACHE = "glide-light-v47";
 const ASSETS = [
   "/",
   "/manifest.json",
@@ -144,6 +144,11 @@ const ASSETS = [
   "/audio/scenarios/glide-complaint-branch-0-alt.mp3",
   "/audio/scenarios/glide-complaint-branch-1.mp3",
   "/audio/scenarios/glide-complaint-branch-1-alt.mp3",
+  "/audio/scenarios/glide-technique-onset.mp3",
+  "/audio/scenarios/glide-technique-linking.mp3",
+  "/audio/scenarios/glide-technique-contact.mp3",
+  "/audio/scenarios/glide-technique-pause.mp3",
+  "/audio/scenarios/glide-technique-conversation.mp3",
   "/audio/voice-manifest.json",
   "/audio/coach/boss_1.mp3",
   "/audio/coach/boss_2.mp3",

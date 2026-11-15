@@ -262,6 +262,17 @@
       <button type="button" id="conversationLifeMode" aria-pressed="false">Môj skutočný rozhovor</button>
     </div>
     <p class="conversation-mode-help" id="conversationModeHelp">Aplikácia prehrá repliky a ty odpovedáš vlastnými slovami.</p>
+    <details class="personal-map" id="personalSituationMap">
+      <summary>Moja mapa situácií <span>✦</span></summary>
+      <p>Vyber si situácie, ktoré chceš precvičovať. Výber môžeš kedykoľvek zmeniť.</p>
+      <div id="personalSituationChoices" class="personal-map-choices" role="group" aria-label="Moje situácie"></div>
+      <div id="personalSituationActions" class="personal-map-actions" hidden>
+        <strong id="personalSituationActive"></strong>
+        <div><button type="button" id="personalMapConversation">Rozhovor</button><button type="button" id="personalMapLesson">Lekcia v Ceste</button><button type="button" id="personalMapLife">Malý krok</button></div>
+        <small id="personalMapStatus" role="status"></small>
+      </div>
+      <small>Výber je uložený v tomto zariadení pre tvoj účet.</small>
+    </details>
     <form id="conversationForm">
       <span class="conversation-scene-label" id="conversationSceneLabel">Vyber situáciu</span>
       <div id="conversationSceneCards" class="conversation-scene-cards" role="group" aria-labelledby="conversationSceneLabel"></div>
@@ -270,6 +281,12 @@
       <textarea id="conversationGoal" maxlength="140" rows="2" required></textarea>
       <button class="btn-3d green full" id="conversationStart">Začať rozhovor</button>
     </form>
+    <details class="spontaneous-card" id="spontaneousActivities">
+      <summary>Spontánne miniaktivity <span>✦</span></summary>
+      <p>Tri krátke otázky bez správnej odpovede. Hovor, ako ti to vyhovuje.</p>
+      <div id="spontaneousChoices" class="spontaneous-choices"></div>
+      <button type="button" id="spontaneousShuffle">Iné nápady ↻</button>
+    </details>
     <button type="button" id="conversationPending" class="conversation-pending" hidden><span>Tvoj plán</span><strong id="conversationPendingTitle"></strong><span id="conversationPendingGoal"></span><span>Zaznamenať, ako to dopadlo →</span></button>
     <section id="conversationCheckin" hidden>
       <form id="conversationBeforeForm">
@@ -318,6 +335,37 @@
   const afterForm = byId("conversationCheckinForm");
   const practiceMode = byId("conversationPracticeMode");
   const lifeMode = byId("conversationLifeMode");
+  const conversationHelp = document.createElement("details");
+  conversationHelp.id = "conversationHelp";
+  conversationHelp.className = "conversation-help";
+  conversationHelp.hidden = true;
+  conversationHelp.innerHTML = '<summary>Pomôž mi začať ✨</summary><p id="conversationHelpQuestion"></p><p id="conversationHelpHint">Pokojne sa na chvíľu zastav. Odpoveď nemusí mať presné znenie – povedz ju po svojom.</p><button type="button" id="conversationReplay">Prehrať otázku znova</button><small id="conversationHelpStatus" role="status"></small>';
+  byId("lessonConversationGoal").after(conversationHelp);
+  let replayAudio = null;
+  function stopReplay() {
+    if (replayAudio) { replayAudio.pause(); replayAudio.currentTime = 0; replayAudio = null; }
+  }
+  byId("conversationReplay").onclick = () => {
+    const question = duoLesson.currentWordItem?.question;
+    const status = byId("conversationHelpStatus");
+    if (byId("startBtn").disabled) { status.textContent = "Otázku si môžeš prehrať pred spustením ďalšieho pokusu."; return; }
+    if (!question?.audioUrl) { status.textContent = "Nahrávka nie je k dispozícii. Otázku si môžeš prečítať vyššie."; return; }
+    stopReplay(); status.textContent = "";
+    const player = replayAudio = new Audio(question.audioUrl);
+    player.onended = () => { if (replayAudio === player) replayAudio = null; };
+    player.play().catch(() => { if (replayAudio === player) { replayAudio = null; status.textContent = "Nahrávku sa nepodarilo prehrať."; } });
+  };
+  byId("startBtn").addEventListener("click", stopReplay, true);
+  const loadConversationItem = duoLesson.loadNextItem.bind(duoLesson);
+  duoLesson.loadNextItem = function () {
+    stopReplay(); loadConversationItem();
+    const visible = !!this.isLessonActive && !!this.conversation && !this.conversation.miniActivity && !!this.currentWordItem;
+    conversationHelp.hidden = !visible; conversationHelp.open = false;
+    if (visible) {
+      byId("conversationHelpQuestion").textContent = this.currentWordItem.question?.promptText || "Vypočuj si otázku a odpovedz po svojom.";
+      byId("conversationHelpStatus").textContent = "";
+    }
+  };
   let openedFor;
   let pending;
   let lifeSceneId = "own";
@@ -327,6 +375,7 @@
   const simulationKey = () => key() + ":simulations-completed";
   const experienceKey = () => key() + ":experiences";
   const preferenceKey = () => key() + ":practice-preference";
+  const personalMapKey = () => key() + ":personal-map";
   function experiences() {
     try { const value = JSON.parse(localStorage.getItem(experienceKey()) || "[]"); return Array.isArray(value) ? value.filter(x => scenes[x.sceneId]) : []; }
     catch { return []; }
@@ -373,6 +422,76 @@
     card.addEventListener("click", () => select(id));
     byId("conversationSceneCards").append(card);
   }
+  let activeMapScene = null;
+  function savedMap() {
+    try { const value = JSON.parse(localStorage.getItem(personalMapKey()) || "[]"); return Array.isArray(value) ? value.filter(id => Object.hasOwn(scenes, id)) : []; }
+    catch { return []; }
+  }
+  function renderMap() {
+    const selected = savedMap();
+    if (!selected.includes(activeMapScene)) activeMapScene = selected[0] || null;
+    const container = byId("personalSituationChoices"); container.replaceChildren();
+    for (const [id, scene] of Object.entries(scenes)) {
+      const button = document.createElement("button"); button.type = "button";
+      button.textContent = `${scene.avatar} ${scene.title}`;
+      button.setAttribute("aria-pressed", String(selected.includes(id)));
+      button.onclick = () => {
+        const next = selected.includes(id) ? selected.filter(item => item !== id) : [...selected, id];
+        activeMapScene = next.includes(id) ? id : next[0] || null;
+        try { localStorage.setItem(personalMapKey(), JSON.stringify(next)); renderMap(); }
+        catch { byId("personalMapStatus").textContent = "Výber sa nepodarilo uložiť v tomto zariadení."; }
+      };
+      container.append(button);
+    }
+    byId("personalSituationActions").hidden = !activeMapScene;
+    byId("personalSituationActive").textContent = activeMapScene ? scenes[activeMapScene].title : "";
+    byId("personalMapStatus").textContent = "";
+    if (selected.length > 1) {
+      const label = document.createElement("span"); label.textContent = "Vyber, ktorú chceš teraz precvičiť:";
+      const picker = document.createElement("span"); picker.className = "personal-map-active-choices";
+      for (const id of selected) {
+        const button = document.createElement("button"); button.type = "button"; button.textContent = scenes[id].title;
+        button.setAttribute("aria-pressed", String(id === activeMapScene));
+        button.onclick = () => { activeMapScene = id; renderMap(); }; picker.append(button);
+      }
+      byId("personalSituationActive").replaceChildren(label, picker);
+    }
+  }
+  byId("personalMapConversation").onclick = () => { if (!activeMapScene) return; select(activeMapScene); byId("conversationGoal").focus(); };
+  byId("personalMapLife").onclick = () => {
+    if (!activeMapScene) return;
+    if (pending) { byId("personalMapStatus").textContent = "Najprv dokonči alebo zaznamenaj uložený plán v časti Môj skutočný rozhovor."; return; }
+    lifeSceneId = activeMapScene; byId("conversationLifeGoal").value = scenes[activeMapScene].goal;
+    showMode(true, false); byId("conversationLifeGoal").focus();
+  };
+  byId("personalMapLesson").onclick = () => {
+    if (!activeMapScene) return;
+    const lessonId = ({ cafe: "4.1", shop: "4.1", doctor: "5.2", job: "5.1", directions: "4.2", restaurant: "4.3", complaint: "5.3", own: "1.1" })[activeMapScene];
+    const world = WORLDS_DATA.find(item => item.levels.some(level => level.id === lessonId));
+    const level = world?.levels.find(item => item.id === lessonId);
+    if (!level || !duoState.isUnlocked(lessonId)) { byId("personalMapStatus").textContent = "Táto lekcia je zatiaľ zamknutá. Pokračuj v Ceste svojím tempom."; return; }
+    byId("navTabCesta").click(); duoLesson.openLevelPopover(level, world);
+  };
+  const miniPrompts = [
+    ["Čo sa ti dnes podarilo?", "Opíš niečo, čo máš práve na očiach.", "Čo by si si teraz rád/rada dal/a?"],
+    ["Ktoré miesto máš rád/rada a prečo?", "Čo by si chcel/a robiť cez víkend?", "Akú hudbu si naposledy počúval/a?"],
+    ["Povedz svoj názor na ranné vstávanie.", "Čo by si odporučil/a návšteve svojho mesta?", "Opíš svoj obľúbený deň."],
+  ];
+  let miniSet = 0;
+  function renderMiniChoices() {
+    const box = byId("spontaneousChoices"); box.replaceChildren();
+    miniPrompts[miniSet].forEach((prompt, index) => {
+      const button = document.createElement("button"); button.type = "button"; button.textContent = prompt;
+      button.onclick = () => {
+        const ordered = [...miniPrompts[miniSet].slice(index), ...miniPrompts[miniSet].slice(0, index)];
+        const plan = { miniActivity: true, title: "Spontánna chvíľka", goal: "Odpovedz vlastnými slovami. Neexistuje správna odpoveď.", tasks: ordered.map(word => ({ word, freeReply: true, attempts: 0 })) };
+        duoLesson.launchSosDrill(plan); byId("startBtn").focus({ preventScroll: true });
+      };
+      box.append(button);
+    });
+  }
+  byId("spontaneousShuffle").onclick = () => { miniSet = (miniSet + 1) % miniPrompts.length; renderMiniChoices(); };
+  renderMiniChoices();
   function records() {
     try {
       const stored = JSON.parse(localStorage.getItem(key()) || "[]");
@@ -404,6 +523,7 @@
     lifeMode.setAttribute("aria-pressed", String(life));
     dialog.dataset.mode = life ? "life" : "practice";
     byId("conversationForm").hidden = life;
+    byId("spontaneousActivities").hidden = life;
     const hasPendingCard = life && !!pending && !after;
     byId("conversationPending").hidden = !hasPendingCard;
     checkin.hidden = !life || hasPendingCard;
@@ -434,6 +554,7 @@
 
   function open(plan) {
     openedFor = key();
+    renderMap();
     beforeForm.reset();
     afterForm.reset();
     try {
@@ -584,6 +705,7 @@
   let ambienceAudio = null;
   let ambiencePlan = null;
   function stopAmbience() {
+    stopReplay();
     if (ambienceAudio) { ambienceAudio.pause(); ambienceAudio.currentTime = 0; }
     ambienceAudio = null;
     ambiencePlan = null;
@@ -614,7 +736,7 @@
 
   function afterAttempt(lesson, result) {
     const plan = lesson.conversation;
-    if (!plan || !result.passed) return;
+    if (!plan || plan.miniActivity || !result.passed) return;
     // Progress reflects completed conversations and captured responses, not fluency.
     if (plan.bonusEligible && !plan.bonusAdded && lesson.completedItemsCount === 3 &&
         lesson.totalAttemptsCount === 3 && lesson.lessonQueue.length === 0) {
@@ -683,6 +805,7 @@
     reset,
     showRecap(plan) {
       stopAmbience();
+      if (plan?.miniActivity) { recap.hidden = true; reflection.hidden = true; return; }
       if (plan && !plan.completionRecorded) {
         plan.completionRecorded = true;
         try {

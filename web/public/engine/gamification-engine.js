@@ -1593,7 +1593,7 @@ class DuoLessonController {
       wordInputEl && wordInputEl.value.trim() ? wordInputEl.value.trim() : "Peter Novák";
 
     // Voľba režimu zo sandboxu
-    const selectedMode = conversation ? "guillotine" : "standard";
+    const selectedMode = conversation && !conversation.miniActivity ? "guillotine" : "standard";
 
     this.isLessonActive = true;
     this.voiceIntroPlayed = false;
@@ -1851,7 +1851,7 @@ class DuoLessonController {
     const accRecap = document.getElementById("recapAccuracyVal");
     const streakRecap = document.getElementById("recapStreakVal");
 
-    if (title) title.textContent = this.conversation ? "Rozhovor dokončený" : this.isSosDrill ? "SOS Dril Dokončený!" : "Lekcia Dokončená!";
+    if (title) title.textContent = this.conversation?.miniActivity ? "Chvíľka dokončená" : this.conversation ? "Rozhovor dokončený" : this.isSosDrill ? "SOS Dril Dokončený!" : "Lekcia Dokončená!";
     if (sub)
       sub.textContent = this.isSosDrill
         ? "Tréning je dokončený. Ako sa ti dnes hovorilo?"

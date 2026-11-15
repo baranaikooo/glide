@@ -145,6 +145,12 @@
     shop: { branches: ["shop-card-v2", "shop-cash-v2", "shop-clarify-v2"], closing: "shop-close-v2" },
     own: { branches: ["own-branch-details", "own-branch-other", "own-branch-clarify"], closing: "own-close" },
   };
+  const newScenarios = [{"id":"job","title":"Pracovný telefonát","caller":"Personalistka","avatar":"💼","voiceGender":"female","goal":"Opýtaj sa na pracovnú ponuku a dohodni si ďalší krok.","opening":"Dobrý deň, personálne oddelenie, prosím?","branches":[["Záujem o ponuku","ponuk|prac|pozic|miest","Ďakujem za záujem. Kedy by ste mohli prísť na stretnutie?"],["Upresniť dôvod","","Prepáčte, môžete mi povedať, kvôli čomu voláte?"]],"closing":"Ďakujem, ozveme sa vám. Je to takto v poriadku?","followup":"Chceli by ste sa ešte na niečo spýtať?","surprise":"Ešte sa spýtam, vyhovovalo by vám dopoludnie?","voices":["Leda","Despina"]},{"id":"directions","title":"Pýtaš sa na cestu","caller":"Okoloidúci","avatar":"🧭","voiceGender":"male","goal":"Opýtaj sa na cestu na miesto, kam chceš ísť.","opening":"Dobrý deň, môžem vám pomôcť?","branches":[["Opýtať sa na cestu","cest|stanic|cent|kde|dostat","Jasné. Hľadáte zastávku alebo idete pešo?"],["Upresniť miesto","","Prepáčte, môžete mi ešte raz povedať, kam sa chcete dostať?"]],"closing":"Choďte rovno a potom odbočte doľava. Pomôže vám to?","followup":"Potrebujete ešte niečo upresniť?","surprise":"Ešte jedna vec, máte mapu v telefóne?","voices":["Charon","Achird"]},{"id":"restaurant","title":"Rezervácia stola","caller":"Obsluha reštaurácie","avatar":"🍽️","voiceGender":"female","goal":"Rezervuj stôl na čas a počet ľudí podľa seba.","opening":"Dobrý deň, reštaurácia, ako vám môžem pomôcť?","branches":[["Rezervovať stôl","rezerv|stol|miest","Na ktorý deň a pre koľko ľudí si prajete rezerváciu?"],["Upresniť požiadavku","","Prepáčte, môžete mi povedať, čo by ste potrebovali?"]],"closing":"Ďakujem, pozriem sa na voľné miesta. Je to všetko?","followup":"Prajete si ešte niečo doplniť?","surprise":"Ešte sa spýtam, vyhovoval by vám aj stôl pri okne?","voices":["Leda","Despina"]},{"id":"complaint","title":"Reklamácia objednávky","caller":"Pracovník predajne","avatar":"📦","voiceGender":"male","goal":"Vysvetli, čo sa stalo s objednávkou a čo by si potreboval/a.","opening":"Dobrý deň, ako vám môžem pomôcť?","branches":[["Problém s objednávkou","objednav|reklam|tovar|pokazen|chyba","Rozumiem. Môžete mi povedať, čo sa s objednávkou stalo?"],["Upresniť požiadavku","","Prepáčte, môžete mi ešte raz povedať, čo potrebujete vyriešiť?"]],"closing":"Pozriem sa na možnosti riešenia. Je to takto v poriadku?","followup":"Potrebujete ešte s niečím pomôcť?","surprise":"Ešte sa spýtam, máte číslo objednávky?","voices":["Charon","Achird"]}];
+  for (const entry of newScenarios) {
+    scenes[entry.id] = { ...entry, audioUrl: "/audio/scenarios/glide-" + entry.id + "-opening.mp3",
+      branches: entry.branches.map(([label, pattern, text]) => [label, pattern ? new RegExp(pattern) : null, text]) };
+    recordedLines[entry.id] = { branches: entry.branches.map((_, i) => entry.id + "-branch-" + i), closing: entry.id + "-close" };
+  }
   const recordedUrl = (id) => "/audio/scenarios/glide-" + id + ".mp3";
 
   const extraQuestions = {
@@ -164,6 +170,11 @@
     shop: "shop-opening-v2-alt",
     own: "own-opening-alt",
   };
+  for (const entry of newScenarios) {
+    extraQuestions[entry.id] = entry.followup;
+    surpriseQuestions[entry.id] = entry.surprise;
+    alternateOpenings[entry.id] = entry.id + "-opening-alt";
+  }
   const turns = new Map();
   function nextTurn(sceneId) {
     const storageKey = "glide_conversation_turn_" + sceneId;
@@ -289,6 +300,16 @@
     "glide_conversations_v1_" + (window.fluencyAuth?.getCurrentUser()?.id || "guest");
   const draftKey = () => key() + ":plan";
   const simulationKey = () => key() + ":simulations-completed";
+  const experienceKey = () => key() + ":experiences";
+  const preferenceKey = () => key() + ":practice-preference";
+  function experiences() {
+    try { const value = JSON.parse(localStorage.getItem(experienceKey()) || "[]"); return Array.isArray(value) ? value.filter(x => scenes[x.sceneId]) : []; }
+    catch { return []; }
+  }
+  function practicePreference() {
+    try { const value = JSON.parse(localStorage.getItem(preferenceKey()) || "null"); return value && scenes[value.sceneId] ? value : null; }
+    catch { return null; }
+  }
   function completedSimulations() {
     try { return Math.max(0, Number.parseInt(localStorage.getItem(simulationKey()), 10) || 0); }
     catch { return 0; }
@@ -340,7 +361,7 @@
   function recommend(entry) {
     if (entry.outcome !== "yes" || entry.effort >= 2 || entry.sceneId === "own")
       return entry.sceneId;
-    const ids = ["cafe", "doctor", "shop"];
+    const ids = ["cafe", "doctor", "shop", "directions", "restaurant", "job", "complaint"];
     return ids[(ids.indexOf(entry.sceneId) + 1) % ids.length];
   }
   function select(sceneId, goal) {
@@ -396,7 +417,10 @@
     } catch { pending = null; }
     const entries = records();
     const last = entries.at(-1);
-    const next = plan?.sceneId || (last ? recommend(last) : "cafe");
+    const preference = practicePreference();
+    const ids = ["cafe", "shop", "directions", "restaurant", "doctor", "job", "complaint"];
+    const preferenceScene = preference && (preference.feeling === "hard" ? "cafe" : preference.feeling === "easy" ? ids[(Math.max(0, ids.indexOf(preference.sceneId)) + 1) % ids.length] : preference.sceneId);
+    const next = plan?.sceneId || (preference && (!last || preference.date > last.date) ? preferenceScene : last ? recommend(last) : "cafe");
     select(next, plan?.goal ?? (last?.sceneId === next ? last.goal : undefined));
     lifeSceneId = plan?.sceneId || pending?.sceneId || "own";
     byId("conversationLifeGoal").value = plan?.goal || pending?.goal || "";
@@ -404,7 +428,9 @@
     byId("conversationPendingGoal").textContent = pending?.goal || "";
     showMode(!!plan, !!plan);
     const successes = entries.filter((entry) => entry.outcome === "yes").length;
-    status.textContent = last
+    status.textContent = preference && !plan && (!last || preference.date > last.date)
+      ? `Podľa tvojho pocitu navrhujeme: ${scenes[next].title}. Môžeš si vybrať aj inú situáciu.`
+      : last
       ? `Zaznamenané rozhovory: ${entries.length}. Cieľ splnený: ${successes}. Návrh na nácvik: ${scenes[recommend(last)].title}.`
       : "";
 
@@ -482,16 +508,53 @@
   recap.type = "button";
   recap.id = "conversationRecap";
   recap.className = "practice-button";
-  recap.textContent = "Zaznamenať rozhovor v živote";
+  recap.textContent = "Vyskúšať podobný rozhovor v živote";
   recap.hidden = true;
   recap.onclick = () => {
     const plan = duoLesson.conversation;
     duoLesson.finishCelebration();
     byId("navTabRozhovory").click();
     open(plan);
+    showMode(true, false);
     byId("conversationCheckin").scrollIntoView({ behavior: "smooth", block: "start" });
   };
   byId("celebrationSub").after(recap);
+
+  const reflection = document.createElement("div");
+  reflection.className = "conversation-reflection";
+  reflection.hidden = true;
+  reflection.innerHTML = '<p>Ako sa ti v rozhovore cítilo? <span>(nepovinné)</span></p><div><button type="button" data-feeling="easy">Pohodovo</button><button type="button" data-feeling="okay">Tak akurát</button><button type="button" data-feeling="hard">Náročné</button></div><small role="status"></small>';
+  recap.after(reflection);
+  reflection.querySelectorAll("button").forEach(button => button.addEventListener("click", () => {
+    const plan = duoLesson.conversation;
+    if (!plan || !scenes[plan.sceneId]) return;
+    try {
+      localStorage.setItem(preferenceKey(), JSON.stringify({ sceneId: plan.sceneId, feeling: button.dataset.feeling, date: Date.now() }));
+      reflection.querySelectorAll("button").forEach(item => item.setAttribute("aria-pressed", String(item === button)));
+      reflection.querySelector("small").textContent = "Ďakujeme, ďalší návrh prispôsobíme tvojmu pocitu. Výber je stále na tebe.";
+    } catch { reflection.querySelector("small").textContent = "Pocit sa nepodarilo uložiť na tomto zariadení."; }
+  }));
+
+  const progressCard = document.createElement("div");
+  progressCard.className = "conversation-progress-card";
+  progressCard.innerHTML = '<strong>Tvoje rozhovorové zážitky ✨</strong><p></p><form><label for="conversationWin">Malé víťazstvo (nepovinné)</label><input id="conversationWin" maxlength="120" placeholder="Čo sa ti podarilo?"><button type="submit">Uložiť</button></form><ul></ul><small>Uložené v tomto zariadení pre tvoj účet.</small>';
+  document.querySelector(".profile-challenges")?.append(progressCard);
+  function renderExperiences() {
+    const unique = [...new Set(experiences().map(entry => entry.sceneId))];
+    progressCard.querySelector("p").textContent = unique.length
+      ? `Vyskúšané situácie: ${unique.map(id => scenes[id].title).join(" · ")}`
+      : "Tvoje vyskúšané situácie sa objavia tu.";
+    let wins = [];
+    try { wins = JSON.parse(localStorage.getItem(key() + ":wins") || "[]"); if (!Array.isArray(wins)) wins = []; } catch (_) {}
+    const list = progressCard.querySelector("ul"); list.replaceChildren();
+    wins.slice(-5).reverse().forEach(win => { const item = document.createElement("li"); item.textContent = String(win); list.append(item); });
+  }
+  progressCard.querySelector("form").onsubmit = event => {
+    event.preventDefault();
+    const input = progressCard.querySelector("input"); const value = input.value.trim(); if (!value) return;
+    try { const wins = JSON.parse(localStorage.getItem(key() + ":wins") || "[]"); localStorage.setItem(key() + ":wins", JSON.stringify([...(Array.isArray(wins) ? wins : []), value].slice(-50))); input.value = ""; renderExperiences(); } catch (_) {}
+  };
+  byId("navTabTelemetria")?.addEventListener("click", renderExperiences);
 
   let ambienceAudio = null;
   let ambiencePlan = null;
@@ -521,6 +584,7 @@
     choiceBox.replaceChildren();
     byId("drawerContinueBtn").disabled = false;
     recap.hidden = true;
+    reflection.hidden = true;
   }
 
   function afterAttempt(lesson, result) {
@@ -596,9 +660,16 @@
       stopAmbience();
       if (plan && !plan.completionRecorded) {
         plan.completionRecorded = true;
-        try { localStorage.setItem(simulationKey(), String(completedSimulations() + 1)); } catch (_) {}
+        try {
+          localStorage.setItem(simulationKey(), String(completedSimulations() + 1));
+          localStorage.setItem(experienceKey(), JSON.stringify([...experiences(), { sceneId: plan.sceneId, date: Date.now() }].slice(-100)));
+        } catch (_) {}
       }
       recap.hidden = !plan;
+      reflection.hidden = !plan;
+      reflection.querySelector("small").textContent = "";
+      reflection.querySelectorAll("button").forEach(button => button.setAttribute("aria-pressed", "false"));
+      renderExperiences();
     },
   };
 })();

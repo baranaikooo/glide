@@ -120,3 +120,19 @@
 .conversation-surface[data-mode="life"] .conversation-pending strong {font-size:17px;}
 .conversation-surface[data-mode="life"] .conversation-pending span:last-child {margin-top:4px;color:var(--purple-hover);font-weight:700;}
 
+.conversation-reflection { display:grid; gap:8px; margin:12px auto; max-width:440px; text-align:center; }
+.conversation-reflection[hidden] { display:none; }
+.conversation-reflection p { margin:0; color:var(--ink); font-weight:600; font-size:13px; }
+.conversation-reflection p span,.conversation-reflection small { color:var(--text-muted); font-weight:400; }
+.conversation-reflection div { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
+.conversation-reflection button { padding:9px 12px; border:1px solid var(--surface-border); border-radius:12px; background:var(--surface); color:var(--ink); }
+.conversation-reflection button[aria-pressed="true"] { background:var(--lavender-soft); border-color:var(--purple); color:var(--purple-hover); }
+.conversation-progress-card { margin:10px 0; padding:15px; border:1px solid var(--surface-border); border-radius:18px; background:var(--surface); color:var(--ink); }
+.conversation-progress-card strong { font-size:14px; }
+.conversation-progress-card p,.conversation-progress-card small,.conversation-progress-card li { font-size:12px; line-height:1.5; color:var(--text-muted); overflow-wrap:anywhere; }
+.conversation-progress-card form { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+.conversation-progress-card form label { flex:1 1 100%; font-size:12px; }
+.conversation-progress-card form input { flex:1 1 130px; min-width:0; padding:9px; border:1px solid var(--surface-border); border-radius:10px; background:var(--bg); color:var(--ink); }
+.profile-challenges .conversation-progress-card form button { width:auto; min-height:40px; }
+.challenge-actions { display:flex; gap:8px; margin:10px 0; }
+.profile-challenges .challenge-actions button { min-height:40px; padding:8px; }

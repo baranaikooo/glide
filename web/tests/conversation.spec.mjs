@@ -63,6 +63,8 @@ test("café rehearsal follows both responses and recommends a next scene from th
   await page.locator("#drawerContinueBtn").click();
   await expect(page.locator("#celebrationTitle")).toHaveText("Rozhovor dokončený");
   await page.locator("#conversationRecap").click();
+  await expect(page.locator("#conversationLifeGoal")).toHaveValue(/dve kávy/i);
+  await page.locator("#conversationAlreadyDone").click();
   await page.locator(".conversation-rating label").filter({ hasText: "Áno" }).click();
   await page.locator(".conversation-rating label").filter({ hasText: "Zvládnuteľný" }).click();
   await page.getByRole("button", { name: "Uložiť záznam", exact: true }).click();
@@ -227,3 +229,60 @@ test("additional question appears after completed practice and accepted replies"
   await expect(page.locator("#celebrationTitle")).toHaveText("Rozhovor dokončený");
   expect(await page.evaluate(() => localStorage.getItem("glide_conversations_v1_guest:simulations-completed"))).toBe("3");
 });
+
+test("new scenes have recorded voices and natural branching", async ({ page }) => {
+  await open(page);
+  await page.locator("#sidebarTabRozhovory").click();
+  for (const name of ["Pracovný telefonát", "Pýtaš sa na cestu", "Rezervácia stola", "Reklamácia objednávky"]) {
+    await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
+  }
+  await page.getByRole("button", { name: "Rezervácia stola", exact: true }).click();
+  await page.getByRole("button", { name: "Začať rozhovor", exact: true }).click();
+  expect(await page.evaluate(() => lessonScenario().audioUrl)).toContain("glide-restaurant-opening.mp3");
+  await speak(page, "Chcem rezervovať stôl");
+  await page.locator("#drawerContinueBtn").click();
+  expect(await page.evaluate(() => lessonScenario().promptText)).toContain("pre koľko ľudí");
+  expect(await page.evaluate(() => lessonScenario().audioUrl)).toContain("restaurant-branch-0.mp3");
+});
+
+test("self-confirmed unheard response advances and offers a choice of follow-up", async ({ page }) => {
+  await open(page);
+  await page.locator("#sidebarTabRozhovory").click();
+  await page.getByRole("button", { name: "Začať rozhovor", exact: true }).click();
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent("dsp-evaluation-complete", { detail: { passed: false, freeReply: true, meta: { freeReply: true, conversation: "cafe" } } })));
+  await expect(page.locator("#practiceCorrect")).toBeVisible();
+  await page.locator("#practiceCorrect").click();
+  await expect(page.locator("#drawerContinueBtn")).toBeDisabled();
+  await page.getByRole("button", { name: "Dve kávy", exact: true }).click();
+  await page.locator("#drawerContinueBtn").click();
+  expect(await page.evaluate(() => lessonScenario().promptText)).toContain("Dve kávy");
+});
+
+test("optional feeling guides next suggestion and profile remembers experiences and wins", async ({ page }) => {
+  await open(page);
+  await page.locator("#sidebarTabRozhovory").click();
+  await page.getByRole("button", { name: "Začať rozhovor", exact: true }).click();
+  await speak(page, "Dve veľké kávy");
+  await page.locator("#drawerContinueBtn").click();
+  await speak(page, "so sebou");
+  await page.locator("#drawerContinueBtn").click();
+  await speak(page, "Áno, ďakujem");
+  await page.locator("#drawerContinueBtn").click();
+  await page.getByRole("button", { name: "Pohodovo", exact: true }).click();
+  await expect(page.locator(".conversation-reflection small")).toContainText("Výber je stále na tebe");
+  await page.locator("#conversationRecap").click();
+  await page.getByRole("button", { name: "Precvičiť v aplikácii" }).click();
+  await page.locator("#navTabRozhovory").evaluate(node => node.click());
+  await expect(page.locator("#conversationRecommendation")).toContainText("V predajni");
+  await page.locator("#navTabTelemetria").evaluate(node => node.click());
+  await expect(page.locator(".conversation-progress-card").filter({ hasText: "Tvoje rozhovorové zážitky" })).toContainText("V kaviarni");
+  await page.locator("#conversationWin").fill("Objednal som kávu");
+  await page.locator("#conversationWin").evaluate(el => el.form.requestSubmit());
+  await expect(page.locator(".conversation-progress-card li")).toHaveText("Objednal som kávu");
+  const challenge=page.locator(".conversation-progress-card").filter({ hasText: "Malý nápad na dnes" });
+  await expect(challenge).toBeVisible();
+  await challenge.getByRole("button", { name: "Iný nápad" }).click();
+  await challenge.getByRole("button", { name: "Upraviť a uložiť" }).click();
+  await expect(page.locator("#practiceSituation")).toHaveValue(/cestu/);
+});
+

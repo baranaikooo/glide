@@ -1,0 +1,68 @@
+/* Shared frosted surfaces and controls, based on the floating navigation. */
+:root {
+  --glass-surface: linear-gradient(145deg, rgba(255,255,255,.86), rgba(241,237,250,.77));
+  --glass-border: rgba(255,255,255,.84);
+  --glass-shadow: 0 12px 35px rgba(42,34,66,.09), inset 0 1px 1px rgba(255,255,255,.95), inset 0 -1px 0 rgba(109,91,150,.10);
+  --glass-dark: linear-gradient(165deg, #393143, #514957 56%, #62596a);
+}
+
+.app-layout {
+  background: radial-gradient(ellipse at 94% 3%, #cfc5f1aa, transparent 28rem), radial-gradient(ellipse at 3% 44%, #ece0edaa, transparent 28rem), #f4f1f7;
+}
+.duo-header, .desktop-sidebar {
+  background: rgba(246,243,251,.83);
+  border-color: rgba(255,255,255,.72);
+  -webkit-backdrop-filter: blur(20px) saturate(145%);
+  backdrop-filter: blur(20px) saturate(145%);
+}
+.todays-focus-card, .world-header-banner, .drill-category,
+.assistant-visual-card, .assistant-controls-card, .assistant-toggle-card,
+.telemetry-card, .telemetry-hero-card, .assistant-info-card,
+.conversation-surface #conversationForm, .conversation-surface #conversationCheckin,
+.lesson-screen .lesson-stage, .node-popover-card, .celebration-card,
+.auth-modal-card, .questionnaire-modal-card, .science-modal-card,
+.glide-choice-dialog, .lesson-round-dialog, #practiceDialog.practice-light {
+  background: var(--glass-surface);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .todays-focus-card, .world-header-banner, .drill-category,
+  .assistant-visual-card, .assistant-controls-card, .telemetry-card,
+  .telemetry-hero-card, .conversation-surface #conversationForm,
+  .conversation-surface #conversationCheckin, .lesson-screen .lesson-stage,
+  .node-popover-card, .celebration-card, .auth-modal-card,
+  .questionnaire-modal-card, .science-modal-card, .glide-choice-dialog,
+  .lesson-round-dialog, #practiceDialog.practice-light {
+    -webkit-backdrop-filter: blur(18px) saturate(145%);
+    backdrop-filter: blur(18px) saturate(145%);
+  }
+}
+.lesson-screen {background:radial-gradient(ellipse at 88% 3%, #d5caf3bb, transparent 26rem), #f4f1f7;}
+.focus-cta-btn, .btn-3d.green, .conversation-surface #conversationStart {
+  background:var(--glass-dark);
+  color:#fff;
+  border:1px solid rgba(255,255,255,.48);
+  box-shadow:0 7px 18px rgba(41,32,55,.18), inset 0 1px 1px rgba(255,255,255,.45);
+}
+.focus-cta-btn:hover, .btn-3d.green:hover {background:linear-gradient(165deg,#494052,#62586c);color:#fff;}
+.conversation-surface .conversation-mode, .compact-extra, .questionnaire-extra,
+.conversation-scene-card, .world-chapters-nav button, button.glide-choice-option,
+.conversation-rating span, .vocabulary-word-row {
+  background:rgba(255,255,255,.56);
+  border-color:rgba(161,150,184,.24);
+}
+.conversation-surface .conversation-mode button[aria-pressed="true"],
+.conversation-scene-card[aria-pressed="true"], .world-chapters-nav button[aria-pressed=true],
+button.glide-choice-option[aria-selected="true"], .conversation-rating input:checked + span {
+  background:#e0daf4;
+  color:#413278;
+  border-color:#9586c8;
+}
+.custom-word-input, .auth-input, .vault-input, #telemetryNameInput,
+.conversation-surface textarea, .conversation-dialog input:not([type=radio]):not([type=checkbox]),
+button.glide-select-trigger {
+  background:rgba(255,255,255,.72);
+  color:var(--ink);
+  border-color:rgba(131,120,154,.30);
+}

@@ -1,4 +1,4 @@
-const CACHE = "glide-light-v36";
+const CACHE = "glide-light-v37";
 const ASSETS = [
   "/",
   "/manifest.json",
@@ -101,4 +101,5 @@ self.addEventListener("fetch", (event) => {
       .catch(async () => (await caches.match(event.request)) || Response.error()),
   );
 });
+
 

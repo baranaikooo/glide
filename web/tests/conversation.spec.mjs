@@ -233,7 +233,7 @@ test("additional question appears after completed practice and accepted replies"
 test("new scenes have recorded voices and natural branching", async ({ page }) => {
   await open(page);
   await page.locator("#sidebarTabRozhovory").click();
-  for (const name of ["Pracovný telefonát", "Pýtaš sa na cestu", "Rezervácia stola", "Reklamácia objednávky"]) {
+  for (const name of ["Pracovný telefonát", "Cesta na stanicu", "Rezervácia stola", "Reklamácia objednávky"]) {
     await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
   }
   await page.getByRole("button", { name: "Rezervácia stola", exact: true }).click();
@@ -286,3 +286,72 @@ test("optional feeling guides next suggestion and profile remembers experiences 
   await expect(page.locator("#practiceSituation")).toHaveValue(/cestu/);
 });
 
+
+test("intent handling is cautious with negation and boundaries across scenarios", async ({ page }) => {
+  await open(page);
+  const cases = [
+    ["shop", "Nemám kartu", null], ["shop", "Kartou nezaplatím", null],
+    ["shop", "Nie kartou, ale v hotovosti", 1], ["shop", "Nie v hotovosti, ale kartou", 0],
+    ["shop", "Nie len kartou, ale aj v hotovosti", null], ["shop", "kartou alebo v hotovosti", null],
+    ["shop", "Kartou, prosím", 0], ["shop", "V hotovosti", 1],
+    ["cafe", "Nechcem so sebou", null], ["cafe", "Nie so sebou, ale na mieste", 1],
+    ["cafe", "Nie na mieste, ale so sebou", 0], ["cafe", "Dve veľké kávy so sebou", 0],
+    ["doctor", "Chcem zmeniť termín", 1], ["doctor", "Nechcem zmeniť termín", null],
+    ["restaurant", "Potrebujem stolicu", null], ["restaurant", "Chcem rezervovať stôl", 0],
+    ["directions", "Kde je nemocnica?", null], ["directions", "Kde je stanica?", 0],
+    ["job", "Volám kvôli pracovnej ponuke", 0], ["job", "Nechcem tú pracovnú ponuku", null],
+    ["complaint", "Mám pokazený tovar", 0], ["complaint", "Nemám problém s tovarom", null],
+    ["own", "Chcel by som niečo doplniť", 0], ["unknown", "Ahoj", null],
+  ];
+  for (const [scene, text, expected] of cases) {
+    const actual = await page.evaluate(([id, value]) => GlideConversation.interpret(id, value), [scene, text]);
+    expect(actual, `${scene}: ${text}`).toBe(expected);
+  }
+});
+
+test("ambiguous payment never starts an incorrect branch and lets the user choose", async ({ page }) => {
+  await open(page);
+  await page.locator("#sidebarTabRozhovory").click();
+  await page.getByRole("button", { name: "V predajni", exact: true }).click();
+  await page.getByRole("button", { name: "Začať rozhovor", exact: true }).click();
+  await speak(page, "Nemám kartu");
+  await expect(page.locator("#drawerContinueBtn")).toBeDisabled();
+  await page.getByRole("button", { name: "V hotovosti", exact: true }).click();
+  await page.locator("#drawerContinueBtn").click();
+  const next = await page.evaluate(() => lessonScenario());
+  expect(next.promptText).toBe("Dobre, zaplatíte v hotovosti.");
+  expect(next.audioUrl).toContain("glide-shop-cash-v2.mp3");
+});
+
+test("every situation and voice chooses the correct branch recording", async ({ page }) => {
+  const fixtures = {
+    cafe: ["cafe-branch-takeaway", "cafe-branch-table", "cafe-branch-coffee", "cafe-branch-clarify"],
+    doctor: ["doctor-branch-book", "doctor-branch-change", "doctor-branch-clarify"],
+    shop: ["shop-card-v2", "shop-cash-v2", "shop-clarify-v2"],
+    own: ["own-branch-details", "own-branch-other", "own-branch-clarify"],
+    job: ["job-branch-0", "job-branch-1"], directions: ["directions-branch-0", "directions-branch-1"],
+    restaurant: ["restaurant-branch-0", "restaurant-branch-1"], complaint: ["complaint-branch-0", "complaint-branch-1"],
+  };
+  for (const [scene, branches] of Object.entries(fixtures)) {
+    for (let turn = 0; turn < 2; turn++) {
+      await open(page);
+      await page.locator("#sidebarTabRozhovory").click();
+      await page.locator(`.conversation-scene-card[data-scene="${scene}"]`).click();
+      if (scene === "own") await page.locator("#conversationGoal").fill("Chcem sa niečo spýtať");
+      await page.locator("#conversationStart").click();
+      const plan = await page.evaluate(() => structuredClone(duoLesson.conversation));
+      const expectedAlternate = scene === "doctor" ? turn === 0 : turn === 1;
+      expect(plan.alternateVoice, `${scene}, turn ${turn}`).toBe(expectedAlternate);
+      for (let index = 0; index < branches.length; index++) {
+        const selected = await page.evaluate(({ plan, index }) => {
+          const lesson = { conversation: plan, completedItemsCount: 1, totalAttemptsCount: 1, lessonQueue: [{ question: {} }] };
+          GlideConversation.afterAttempt(lesson, { passed: true, conversationChoice: index });
+          return lesson.lessonQueue[0].question;
+        }, { plan, index });
+        const expected = `/audio/scenarios/glide-${branches[index]}${expectedAlternate ? "-alt" : ""}.mp3`;
+        expect(selected.audioUrl).toBe(expected);
+        expect((await page.request.get(expected)).status()).toBe(200);
+      }
+    }
+  }
+});

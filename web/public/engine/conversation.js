@@ -111,7 +111,21 @@
 
   function interpret(sceneId, transcript) {
     const text = normalize(transcript);
-    if (!text || /\b(?:nie|nechcem|nepotrebujem|nevyhovuje)\b/.test(text)) return null;
+    if (!text || !scenes[sceneId]) return null;
+    // Never guess when words that change intent make an answer uncertain.
+    const negative = /\b(?:nie|bez|neda|ne(?:mam|mas|maju|chc|potreb|vyhov|plat|zaplat|moz|fung|ber|prijim|viem|vedel)\w*)\b/;
+    if (negative.test(text)) {
+      // Resolve only clear contrasts between the two alternatives in these scenes.
+      const parts = text.split(/\s+(?:ale|avsak)\s+/);
+      const patterns = sceneId === "shop"
+        ? [/\bkart\w*\b/, /\b(?:hotovost\w*|cash)\b/]
+        : sceneId === "cafe" ? [/\bso sebou\b/, /\b(?:na mieste|tu pri stole|na stol)\b/] : null;
+      if (!patterns || parts.length !== 2 || !negative.test(parts[0]) || negative.test(parts[1]) || /\bnie\s+(?:len|iba)\b/.test(parts[0])) return null;
+      const rejected = patterns.map(pattern => pattern.test(parts[0]));
+      const preferred = patterns.map(pattern => pattern.test(parts[1]));
+      if (rejected.filter(Boolean).length !== 1 || preferred.filter(Boolean).length !== 1 || rejected.indexOf(true) === preferred.indexOf(true)) return null;
+      return preferred.indexOf(true);
+    }
     const found =
       scenes[sceneId]?.branches.flatMap(([, pattern], index) =>
         pattern?.test(text) ? [index] : [],
@@ -146,9 +160,20 @@
     own: { branches: ["own-branch-details", "own-branch-other", "own-branch-clarify"], closing: "own-close" },
   };
   const newScenarios = [{"id":"job","title":"Pracovný telefonát","caller":"Personalistka","avatar":"💼","voiceGender":"female","goal":"Opýtaj sa na pracovnú ponuku a dohodni si ďalší krok.","opening":"Dobrý deň, personálne oddelenie, prosím?","branches":[["Záujem o ponuku","ponuk|prac|pozic|miest","Ďakujem za záujem. Kedy by ste mohli prísť na stretnutie?"],["Upresniť dôvod","","Prepáčte, môžete mi povedať, kvôli čomu voláte?"]],"closing":"Ďakujem, ozveme sa vám. Je to takto v poriadku?","followup":"Chceli by ste sa ešte na niečo spýtať?","surprise":"Ešte sa spýtam, vyhovovalo by vám dopoludnie?","voices":["Leda","Despina"]},{"id":"directions","title":"Pýtaš sa na cestu","caller":"Okoloidúci","avatar":"🧭","voiceGender":"male","goal":"Opýtaj sa na cestu na miesto, kam chceš ísť.","opening":"Dobrý deň, môžem vám pomôcť?","branches":[["Opýtať sa na cestu","cest|stanic|cent|kde|dostat","Jasné. Hľadáte zastávku alebo idete pešo?"],["Upresniť miesto","","Prepáčte, môžete mi ešte raz povedať, kam sa chcete dostať?"]],"closing":"Choďte rovno a potom odbočte doľava. Pomôže vám to?","followup":"Potrebujete ešte niečo upresniť?","surprise":"Ešte jedna vec, máte mapu v telefóne?","voices":["Charon","Achird"]},{"id":"restaurant","title":"Rezervácia stola","caller":"Obsluha reštaurácie","avatar":"🍽️","voiceGender":"female","goal":"Rezervuj stôl na čas a počet ľudí podľa seba.","opening":"Dobrý deň, reštaurácia, ako vám môžem pomôcť?","branches":[["Rezervovať stôl","rezerv|stol|miest","Na ktorý deň a pre koľko ľudí si prajete rezerváciu?"],["Upresniť požiadavku","","Prepáčte, môžete mi povedať, čo by ste potrebovali?"]],"closing":"Ďakujem, pozriem sa na voľné miesta. Je to všetko?","followup":"Prajete si ešte niečo doplniť?","surprise":"Ešte sa spýtam, vyhovoval by vám aj stôl pri okne?","voices":["Leda","Despina"]},{"id":"complaint","title":"Reklamácia objednávky","caller":"Pracovník predajne","avatar":"📦","voiceGender":"male","goal":"Vysvetli, čo sa stalo s objednávkou a čo by si potreboval/a.","opening":"Dobrý deň, ako vám môžem pomôcť?","branches":[["Problém s objednávkou","objednav|reklam|tovar|pokazen|chyba","Rozumiem. Môžete mi povedať, čo sa s objednávkou stalo?"],["Upresniť požiadavku","","Prepáčte, môžete mi ešte raz povedať, čo potrebujete vyriešiť?"]],"closing":"Pozriem sa na možnosti riešenia. Je to takto v poriadku?","followup":"Potrebujete ešte s niečím pomôcť?","surprise":"Ešte sa spýtam, máte číslo objednávky?","voices":["Charon","Achird"]}];
+  const safeScenePatterns = {
+    job: /\b(?:ponuk\w*|prac\w*|pozici\w*|volne miesto)\b/,
+    directions: /\b(?:stanic\w*|vlakova stanica)\b/,
+    restaurant: /\b(?:rezerv\w*|stol(?:a|u|om|y|ov|ik|ika|iku|ikom)?|miest(?:o|a|om|ach)?)\b/,
+    complaint: /\b(?:objednav\w*|reklam\w*|tovar\w*|pokazen\w*|chyb\w*)\b/,
+  };
   for (const entry of newScenarios) {
+    if (entry.id === "directions") {
+      entry.title = "Cesta na stanicu";
+      entry.goal = "V modelovej situácii sa opýtaj na cestu na stanicu.";
+      entry.branches[0][0] = "Opýtať sa na stanicu";
+    }
     scenes[entry.id] = { ...entry, audioUrl: "/audio/scenarios/glide-" + entry.id + "-opening.mp3",
-      branches: entry.branches.map(([label, pattern, text]) => [label, pattern ? new RegExp(pattern) : null, text]) };
+      branches: entry.branches.map(([label, pattern, text], index) => [label, pattern && index === 0 ? safeScenePatterns[entry.id] : null, text]) };
     recordedLines[entry.id] = { branches: entry.branches.map((_, i) => entry.id + "-branch-" + i), closing: entry.id + "-close" };
   }
   const recordedUrl = (id) => "/audio/scenarios/glide-" + id + ".mp3";

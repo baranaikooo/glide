@@ -59,7 +59,7 @@ test('lesson technique demos have audio and respect reduced motion', async ({pag
   expect(await page.locator('#lessonTechniqueDemo .technique-wave i').first().evaluate(el=>getComputedStyle(el).animationName)).toBe('none');
   await page.evaluate(() => { window.__demos=[]; window.Audio=class { constructor(url){this.url=url;window.__demos.push(this)} play(){return Promise.resolve()} pause(){this.paused=true} }; });
   await page.locator('#lessonTechniqueDemo .technique-audio').click();
-  expect(await page.evaluate(() => window.__demos[0].url)).toContain('glide-lesson-guide-1-1.mp3');
+  expect(await page.evaluate(() => window.__demos[0].url)).toContain('glide-lesson-example-1-1.mp3');
   await page.locator('#startLessonBtn').click();
   expect(await page.evaluate(() => window.__demos[0].paused)).toBe(true);
   await page.locator('.lesson-hint > summary').click();
@@ -68,7 +68,7 @@ test('lesson technique demos have audio and respect reduced motion', async ({pag
   await expect(page.locator('#activeTechniqueDemo')).toContainText('Jemný nábeh: A a O');
 });
 
-test('every lesson has its own recorded guide and topic-specific steps', async ({page}) => {
+test('every lesson has its own spoken example and topic-specific steps', async ({page}) => {
   await open(page);
   await page.evaluate(() => { window.__guides=[]; window.Audio=class { constructor(url){this.url=url;window.__guides.push(url)} play(){return Promise.resolve()} pause(){} }; });
   const guideResults = await page.evaluate(() => {
@@ -85,7 +85,7 @@ test('every lesson has its own recorded guide and topic-specific steps', async (
   expect(guideResults).toHaveLength(25);
   expect(new Set(guideResults.map(x=>x.file)).size).toBe(25);
   for (const item of guideResults) {
-    expect(item.file).toBe(`/audio/scenarios/glide-lesson-guide-${item.id.replace('.', '-')}.mp3`);
+    expect(item.file).toBe(`/audio/scenarios/glide-lesson-example-${item.id.replace('.', '-')}.mp3`);
     const response=await page.request.get(item.file);
     expect(response.status()).toBe(200);
     expect(response.headers()['content-type']).toMatch(/audio/);

@@ -153,3 +153,28 @@
 .conversation-help { width:min(100%,390px); margin:4px auto; text-align:left; border:1px solid var(--surface-border); border-radius:14px; background:var(--surface); padding:9px 12px; }
 .conversation-help summary { cursor:pointer; color:var(--purple-hover); font-size:12px; font-weight:700; }
 .conversation-help p,.conversation-help small { display:block; margin:6px 0; color:var(--text-muted); font-size:12px; line-height:1.4; }
+/* A single situation picker keeps favorites and actions together. */
+.conversation-scene-item { position:relative; min-width:0; }
+.conversation-surface .conversation-scene-item .conversation-scene-card { width:100%; height:100%; padding-right:44px; }
+.conversation-scene-item .conversation-favorite { position:absolute; top:7px; right:7px; display:grid; place-items:center; width:36px; height:36px; padding:0; border:0; border-radius:11px; background:transparent; color:var(--text-muted); font-size:22px; line-height:1; }
+.conversation-scene-item .conversation-favorite[aria-pressed="true"] { color:#8b68c8; background:var(--lavender-soft); }
+.conversation-scene-item .conversation-favorite:focus-visible { outline:3px solid #a69ae2; outline-offset:1px; }
+.conversation-favorite-hint { margin:-6px 0 0; color:var(--text-muted); font-size:11px; line-height:1.4; }
+.situation-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.situation-actions button { min-width:0; min-height:44px; padding:8px; border:1px solid var(--surface-border); border-radius:12px; background:var(--bg); color:var(--purple-hover); font:inherit; font-size:12px; font-weight:700; }
+#personalMapStatus { color:var(--text-muted); font-size:12px; line-height:1.4; }
+#personalMapStatus:empty { display:none; }
+.spontaneous-card { margin:0 0 14px; padding:14px; border-color:#d3c5eb; background:linear-gradient(135deg,#f2edff,#fbf8ff); box-shadow:0 8px 22px #6a4b9b13; }
+.spontaneous-card summary { align-items:center; justify-content:flex-start; gap:11px; list-style:none; }
+.spontaneous-card summary::-webkit-details-marker { display:none; }
+.spontaneous-card summary .spontaneous-icon { display:grid; place-items:center; flex:0 0 42px; width:42px; height:42px; border-radius:14px; background:#e4dafa; color:#7656bd; font-size:22px; }
+.spontaneous-card summary .spontaneous-heading { display:grid; gap:3px; flex:1; min-width:0; color:var(--ink); }
+.spontaneous-heading strong { font-size:14px; }
+.spontaneous-heading small { color:var(--text-muted); font-size:11px; font-weight:400; line-height:1.35; }
+.spontaneous-card summary .spontaneous-arrow { color:var(--purple-hover); font-size:20px; transition:transform .2s ease; }
+.spontaneous-card[open] .spontaneous-arrow { transform:rotate(180deg); }
+@media(prefers-reduced-motion:reduce) { .spontaneous-card summary .spontaneous-arrow { transition:none; } }
+/* Give long Slovak titles the full card width below the favorite control. */
+.conversation-surface .conversation-scene-item .conversation-scene-card { flex-direction:column; align-items:flex-start; justify-content:flex-start; gap:7px; min-height:100px; padding:10px 12px; }
+.conversation-scene-item .conversation-scene-icon { width:28px; height:28px; flex-basis:28px; font-size:16px; }
+.conversation-scene-item .conversation-scene-card > span:last-child { width:100%; overflow-wrap:normal; word-break:normal; }

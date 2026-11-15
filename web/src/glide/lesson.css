@@ -140,3 +140,17 @@
 @keyframes technique-pulse { 0%,100% { transform:scaleY(.45); opacity:.55; } 50% { transform:scaleY(1.2); opacity:1; } }
 @media (prefers-reduced-motion: reduce) { .technique-wave i { animation:none!important; transform:none; } }
 @media(max-height:680px) { .lesson-screen .pacer-wrapper { min-height:110px; } }
+.guided-technique .technique-stage-copy { display:grid; gap:4px; min-width:0; }
+.guided-technique .technique-stage-copy strong { margin:0; font-size:13px; }
+.guided-technique .technique-stage-copy span { color:var(--ink); font-size:12px; font-weight:400; line-height:1.4; }
+.guided-technique .technique-wave i { animation:none; transition:height .35s ease,opacity .35s ease; }
+.guided-technique[data-stage="0"] .technique-wave i { height:6px; opacity:.5; }
+.guided-technique[data-stage="1"] .technique-wave i:nth-child(odd) { height:14px; opacity:.8; }
+.guided-technique[data-stage="1"] .technique-wave i:nth-child(even) { height:23px; opacity:.8; }
+.guided-technique[data-stage="2"] .technique-wave i:nth-child(odd) { height:23px; opacity:1; }
+.guided-technique[data-stage="2"] .technique-wave i:nth-child(even) { height:32px; opacity:1; }
+.technique-stage-buttons { display:flex; gap:6px; margin:8px 0; }
+.technique-stage-buttons button { display:grid; place-items:center; width:36px; height:36px; border:1px solid var(--surface-border); border-radius:11px; background:var(--surface); color:var(--ink); font:inherit; font-size:12px; }
+.technique-stage-buttons button[aria-pressed="true"] { background:var(--lavender-soft); color:var(--purple-hover); border-color:var(--purple); }
+.technique-expert-link { display:block; margin-top:8px; color:var(--purple-hover); font-size:12px; text-decoration:underline; }
+@media(prefers-reduced-motion:reduce) { .guided-technique .technique-wave i { transition:none!important; } }

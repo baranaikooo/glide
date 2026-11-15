@@ -262,31 +262,23 @@
       <button type="button" id="conversationLifeMode" aria-pressed="false">Môj skutočný rozhovor</button>
     </div>
     <p class="conversation-mode-help" id="conversationModeHelp">Aplikácia prehrá repliky a ty odpovedáš vlastnými slovami.</p>
-    <details class="personal-map" id="personalSituationMap">
-      <summary>Moja mapa situácií <span>✦</span></summary>
-      <p>Vyber si situácie, ktoré chceš precvičovať. Výber môžeš kedykoľvek zmeniť.</p>
-      <div id="personalSituationChoices" class="personal-map-choices" role="group" aria-label="Moje situácie"></div>
-      <div id="personalSituationActions" class="personal-map-actions" hidden>
-        <strong id="personalSituationActive"></strong>
-        <div><button type="button" id="personalMapConversation">Rozhovor</button><button type="button" id="personalMapLesson">Lekcia v Ceste</button><button type="button" id="personalMapLife">Malý krok</button></div>
-        <small id="personalMapStatus" role="status"></small>
-      </div>
-      <small>Výber je uložený v tomto zariadení pre tvoj účet.</small>
+    <details class="spontaneous-card" id="spontaneousActivities">
+      <summary><span class="spontaneous-icon" aria-hidden="true">✦</span><span class="spontaneous-heading"><strong>Spontánne miniaktivity</strong><small>Tri krátke otázky · odpovedáš po svojom</small></span><span class="spontaneous-arrow" aria-hidden="true">⌄</span></summary>
+      <p>Vyber si, čím chceš začať. Každá odpoveď je tvoja.</p>
+      <div id="spontaneousChoices" class="spontaneous-choices"></div>
+      <button type="button" id="spontaneousShuffle">Iné nápady ↻</button>
     </details>
     <form id="conversationForm">
       <span class="conversation-scene-label" id="conversationSceneLabel">Vyber situáciu</span>
+      <p class="conversation-favorite-hint">Hviezdičkou si ulož obľúbené situácie navrch.</p>
       <div id="conversationSceneCards" class="conversation-scene-cards" role="group" aria-labelledby="conversationSceneLabel"></div>
       <select id="conversationScene" data-glide-select="scene-cards" aria-label="Situácia" aria-hidden="true" tabindex="-1" class="conversation-scene-select"></select>
       <label for="conversationGoal">Čo chceš povedať alebo vybaviť?</label>
       <textarea id="conversationGoal" maxlength="140" rows="2" required></textarea>
       <button class="btn-3d green full" id="conversationStart">Začať rozhovor</button>
+      <div class="situation-actions"><button type="button" id="personalMapLesson">Lekcia v Ceste</button><button type="button" id="personalMapLife">Naplánovať malý krok</button></div>
+      <small id="personalMapStatus" role="status"></small>
     </form>
-    <details class="spontaneous-card" id="spontaneousActivities">
-      <summary>Spontánne miniaktivity <span>✦</span></summary>
-      <p>Tri krátke otázky bez správnej odpovede. Hovor, ako ti to vyhovuje.</p>
-      <div id="spontaneousChoices" class="spontaneous-choices"></div>
-      <button type="button" id="spontaneousShuffle">Iné nápady ↻</button>
-    </details>
     <button type="button" id="conversationPending" class="conversation-pending" hidden><span>Tvoj plán</span><strong id="conversationPendingTitle"></strong><span id="conversationPendingGoal"></span><span>Zaznamenať, ako to dopadlo →</span></button>
     <section id="conversationCheckin" hidden>
       <form id="conversationBeforeForm">
@@ -405,68 +397,48 @@
   choiceBox.hidden = true;
   byId("drawerContinueBtn").before(choiceBox);
 
-  for (const [id, scene] of Object.entries(scenes)) {
-    sceneSelect.add(new Option(scene.title, id));
-    const card = document.createElement("button");
-    card.type = "button";
-    card.className = "conversation-scene-card";
-    card.dataset.scene = id;
-    card.setAttribute("aria-pressed", "false");
-    const icon = document.createElement("span");
-    icon.className = "conversation-scene-icon";
-    icon.setAttribute("aria-hidden", "true");
-    icon.textContent = scene.avatar;
-    const title = document.createElement("span");
-    title.textContent = scene.title;
-    card.append(icon, title);
-    card.addEventListener("click", () => select(id));
-    byId("conversationSceneCards").append(card);
-  }
-  let activeMapScene = null;
   function savedMap() {
     try { const value = JSON.parse(localStorage.getItem(personalMapKey()) || "[]"); return Array.isArray(value) ? value.filter(id => Object.hasOwn(scenes, id)) : []; }
     catch { return []; }
   }
+  const sceneItems = new Map();
+  for (const [id, scene] of Object.entries(scenes)) {
+    sceneSelect.add(new Option(scene.title, id));
+    const item = document.createElement("div"); item.className = "conversation-scene-item";
+    const card = document.createElement("button"); card.type = "button"; card.className = "conversation-scene-card";
+    card.dataset.scene = id; card.setAttribute("aria-pressed", "false");
+    const icon = document.createElement("span"); icon.className = "conversation-scene-icon"; icon.setAttribute("aria-hidden", "true"); icon.textContent = scene.avatar;
+    const title = document.createElement("span"); title.textContent = scene.title;
+    card.append(icon, title); card.addEventListener("click", () => select(id));
+    const favorite = document.createElement("button"); favorite.type = "button"; favorite.className = "conversation-favorite";
+    favorite.addEventListener("click", () => {
+      const selected = savedMap();
+      const next = selected.includes(id) ? selected.filter(item => item !== id) : [...selected, id];
+      try { localStorage.setItem(personalMapKey(), JSON.stringify(next)); renderMap(); favorite.focus({ preventScroll: true }); }
+      catch { byId("personalMapStatus").textContent = "Obľúbenú situáciu sa nepodarilo uložiť v tomto zariadení."; }
+    });
+    item.append(card, favorite); sceneItems.set(id, { item, card, favorite });
+  }
   function renderMap() {
-    const selected = savedMap();
-    if (!selected.includes(activeMapScene)) activeMapScene = selected[0] || null;
-    const container = byId("personalSituationChoices"); container.replaceChildren();
-    for (const [id, scene] of Object.entries(scenes)) {
-      const button = document.createElement("button"); button.type = "button";
-      button.textContent = `${scene.avatar} ${scene.title}`;
-      button.setAttribute("aria-pressed", String(selected.includes(id)));
-      button.onclick = () => {
-        const next = selected.includes(id) ? selected.filter(item => item !== id) : [...selected, id];
-        activeMapScene = next.includes(id) ? id : next[0] || null;
-        try { localStorage.setItem(personalMapKey(), JSON.stringify(next)); renderMap(); }
-        catch { byId("personalMapStatus").textContent = "Výber sa nepodarilo uložiť v tomto zariadení."; }
-      };
-      container.append(button);
-    }
-    byId("personalSituationActions").hidden = !activeMapScene;
-    byId("personalSituationActive").textContent = activeMapScene ? scenes[activeMapScene].title : "";
-    byId("personalMapStatus").textContent = "";
-    if (selected.length > 1) {
-      const label = document.createElement("span"); label.textContent = "Vyber, ktorú chceš teraz precvičiť:";
-      const picker = document.createElement("span"); picker.className = "personal-map-active-choices";
-      for (const id of selected) {
-        const button = document.createElement("button"); button.type = "button"; button.textContent = scenes[id].title;
-        button.setAttribute("aria-pressed", String(id === activeMapScene));
-        button.onclick = () => { activeMapScene = id; renderMap(); }; picker.append(button);
-      }
-      byId("personalSituationActive").replaceChildren(label, picker);
+    const favorites = savedMap(); const container = byId("conversationSceneCards");
+    const ids = [...sceneItems.keys()].sort((a, b) => Number(favorites.includes(b)) - Number(favorites.includes(a)));
+    for (const id of ids) {
+      const { item, favorite } = sceneItems.get(id); const selected = favorites.includes(id);
+      favorite.textContent = selected ? "★" : "☆";
+      favorite.setAttribute("aria-pressed", String(selected));
+      favorite.setAttribute("aria-label", selected ? `Odobrať ${scenes[id].title} z obľúbených` : `Pridať ${scenes[id].title} medzi obľúbené`);
+      container.append(item);
     }
   }
-  byId("personalMapConversation").onclick = () => { if (!activeMapScene) return; select(activeMapScene); byId("conversationGoal").focus(); };
   byId("personalMapLife").onclick = () => {
-    if (!activeMapScene) return;
+    const sceneId = sceneSelect.value; if (!scenes[sceneId]) return;
     if (pending) { byId("personalMapStatus").textContent = "Najprv dokonči alebo zaznamenaj uložený plán v časti Môj skutočný rozhovor."; return; }
-    lifeSceneId = activeMapScene; byId("conversationLifeGoal").value = scenes[activeMapScene].goal;
+    lifeSceneId = sceneId; byId("conversationLifeGoal").value = goalInput.value.trim() || scenes[sceneId].goal;
     showMode(true, false); byId("conversationLifeGoal").focus();
   };
   byId("personalMapLesson").onclick = () => {
-    if (!activeMapScene) return;
-    const lessonId = ({ cafe: "4.1", shop: "4.1", doctor: "5.2", job: "5.1", directions: "4.2", restaurant: "4.3", complaint: "5.3", own: "1.1" })[activeMapScene];
+    const sceneId = sceneSelect.value; if (!scenes[sceneId]) return;
+    const lessonId = ({ cafe: "4.1", shop: "4.1", doctor: "5.2", job: "5.1", directions: "4.2", restaurant: "4.3", complaint: "5.3", own: "1.1" })[sceneId];
     const world = WORLDS_DATA.find(item => item.levels.some(level => level.id === lessonId));
     const level = world?.levels.find(item => item.id === lessonId);
     if (!level || !duoState.isUnlocked(lessonId)) { byId("personalMapStatus").textContent = "Táto lekcia je zatiaľ zamknutá. Pokračuj v Ceste svojím tempom."; return; }
@@ -510,6 +482,7 @@
   }
   function select(sceneId, goal) {
     sceneSelect.value = sceneId;
+    byId("personalMapStatus").textContent = "";
     dialog.querySelectorAll(".conversation-scene-card").forEach((card) => card.setAttribute("aria-pressed", String(card.dataset.scene === sceneId)));
     goalInput.value = goal ?? scenes[sceneId].goal;
     goalInput.placeholder = "Napríklad dohodnúť si nový termín";

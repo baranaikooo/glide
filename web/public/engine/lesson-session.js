@@ -124,57 +124,51 @@
     root.abortActiveDspSession?.();
     c.exitFocusMode();
   }
-  const techniqueExamples = [
-    {
-      title: "Jemný začiatok hlasu",
-      steps: ["Uvoľni čeľusť", "Začni tichým „a“", "Plynulo dopovedz „áno“"],
-      hint: "Na začiatku môže hlas jemne zosilnieť. Skús to v pohodlnej hlasitosti.",
-    },
-    {
-      title: "Plynulé spojenie znelých hlások",
-      steps: ["Jemne začni „m“", "Prejdi do „á“", "Dopovedz „máme“"],
-      hint: "Vyskúšaj prechod z „m“ do samohlásky v jednom plynulom pohybe.",
-    },
-    {
-      title: "Ľahký kontakt pri spoluhláske",
-      steps: ["Pri „p“ ľahko spoj pery", "Povoľ pery", "Povedz „pero“"],
-      hint: "Pri „t“ skús rovnako ľahký dotyk jazykom za hornými zubami.",
-    },
-    {
-      title: "Pauza medzi významovými celkami",
-      steps: ["„Dve veľké kávy“", "Krátka pauza", "„So sebou, prosím“"],
-      hint: "Pauzu urob tam, kde sa končí časť myšlienky. Pri otázkach môžeš odpovedať vlastnými slovami.",
-    },
-    {
-      title: "Prenos techniky do rozhovoru",
-      steps: ["Vypočuj si otázku", "Daj si chvíľu", "Odpovedz vlastnými slovami"],
-      hint: "Pri telefonáte si môžeš vopred zvoliť jednoduchý cieľ, napríklad dohodnúť termín.",
-    },
-  ];
-
-  const demoTypes = ["onset", "linking", "contact", "pause", "conversation"];
-  const demoCaptions = ["a → áno", "m → á → máme", "pery → hlas", "časť vety · pauza · ďalšia časť", "počúvam → odpovedám"];
+  // Instructions are specific to each lesson; generated speech is narration, not a clinical demonstration.
+  const lessonGuides = {"1.1":{"id":"1.1","title":"Jemný nábeh: A a O","type":"onset","steps":["Pohodlne uvoľni ústa.","Začni samohlásku A jemne a postupne pridaj hlas.","Dopovedz slovo „auto“ bez ponáhľania."],"hint":"Začni hlas postupne, bez tlačenia a bez núteného šepotu.","caption":"A → auto","guide":"V tejto lekcii skús jemný začiatok samohlásky A. Začni tichšie, postupne pridaj hlas a dopovedz slovo. Napríklad: auto."},"1.2":{"id":"1.2","title":"Jemný nábeh: E a I","type":"onset","steps":["Uvoľni ústa a vyber si pohodlný hlas.","Začni samohlásku I jemne.","Pokračuj do slova „isto“."],"hint":"Začiatok hlasu nech postupne zosilnie do bežnej hlasitosti.","caption":"I → isto","guide":"Skús jemný začiatok samohlásky I. Začni hlas potichu, potom plynulo pokračuj. Napríklad: isto."},"1.3":{"id":"1.3","title":"Jemný nábeh: U a Ô","type":"onset","steps":["Pery prirodzene zaokrúhli.","Začni U jemne, bez tlačenia.","Pokračuj slovom „ulica“."],"hint":"Zaokrúhlenie pier nech je pohodlné, bez prehnaného pohybu.","caption":"U → ulica","guide":"Skús jemný začiatok hlásky U. Pery prirodzene zaokrúhli, hlas nechaj postupne zosilnieť. Napríklad: ulica."},"1.4":{"id":"1.4","title":"Jemný začiatok mena","type":"onset","steps":["Vyber si meno, ktoré chceš povedať.","Prvú samohlásku začni jemne.","Pokračuj menom prirodzeným tempom."],"hint":"Nemusíš pred slovom nasilu vydychovať ani vkladať ďalší zvuk.","caption":"A → Andrea","guide":"Pri mene začni prvú samohlásku jemne a plynulo pokračuj. Nemusíš pred slovom nasilu vydychovať. Napríklad: Andrea."},"1.5":{"id":"1.5","title":"Samohlásky v dlhšom slove","type":"onset","steps":["Vyber si dlhšie slovo.","Prvú samohlásku začni jemne.","Zvyšok slova povedz vlastným tempom."],"hint":"Techniku môžeš použiť aj len na začiatku slova.","caption":"A → autobus","guide":"V dlhšom slove sa sústreď iba na pohodlný začiatok. Potom slovo dopovedz svojím tempom. Napríklad: autobus."},"2.1":{"id":"2.1","title":"Spojenie M so samohláskou","type":"linking","steps":["Pery jemne spoj pri M.","Nechaj hlas plynule prejsť do A.","Pokračuj slovom „mama“."],"hint":"Prechod si vyskúšaj bez tlačenia; nemusíš hlásku naťahovať.","caption":"M → A → mama","guide":"Jemne spoj pery pri M a skús plynulo prejsť do A. Potom dopovedz celé slovo. Napríklad: mama."},"2.2":{"id":"2.2","title":"Spojenie V so samohláskou","type":"linking","steps":["Jemne priblíž horné zuby k dolnej pere.","Začni V pohodlným hlasom.","Prejdi do slova „voda“."],"hint":"Dotyk aj hlas môžu zostať ľahké a prirodzené.","caption":"V → O → voda","guide":"Pri hláske V jemne priblíž horné zuby k dolnej pere. Potom prejdi do samohlásky. Napríklad: voda."},"2.3":{"id":"2.3","title":"Plynulý prechod pri L","type":"linking","steps":["Jazyk jemne prilož za horné zuby.","Začni L pohodlne.","Prejdi do slova „lampa“."],"hint":"Sústreď sa na ľahký prechod, nie na dokonalú výslovnosť.","caption":"L → A → lampa","guide":"Pri L jemne prilož jazyk za horné zuby a prejdi do samohlásky. Napríklad: lampa."},"2.4":{"id":"2.4","title":"Ľahký kontakt pri B","type":"contact","steps":["Jemne spoj pery na začiatku B.","Pery uvoľni a pokračuj hlasom.","Dopovedz slovo „brat“."],"hint":"Kontakt pier môže byť ľahký, bez silného stláčania.","caption":"pery → B → brat","guide":"Na začiatku B jemne spoj pery. Potom ich uvoľni a pokračuj v slove. Napríklad: brat."},"2.5":{"id":"2.5","title":"Ľahký začiatok dlhého slova","type":"linking","steps":["Vyber si dlhšie slovo.","Prvý kontakt urob jemne.","Pokračuj bez núteného spomaľovania."],"hint":"Ak chceš, krátko sa zastav medzi myšlienkami, nie vynútene v každom slove.","caption":"B → Bratislava","guide":"Pri dlhšom slove začni pohodlným ľahkým kontaktom a pokračuj svojím tempom. Napríklad: Bratislava."},"3.1":{"id":"3.1","title":"Ľahký kontakt pri P","type":"contact","steps":["Jemne spoj pery na P.","Pery uvoľni bez silného stlačenia.","Pokračuj slovom „Peter“."],"hint":"Začiatok môže byť krátky a prirodzený.","caption":"pery → P → Peter","guide":"Pri hláske P jemne spoj pery, potom ich uvoľni a pokračuj. Napríklad: Peter."},"3.2":{"id":"3.2","title":"Ľahký začiatok pri K","type":"contact","steps":["Pohodlne priprav jazyk na K.","Nesnaž sa vytvoriť silný tlak.","Pokračuj slovom „káva“."],"hint":"Netreba kontrolovať presnú polohu jazyka, dôležité je pohodlie.","caption":"K → káva","guide":"Pri K sa nesnaž vytvoriť silný tlak. Začni pohodlne a pokračuj slovom. Napríklad: káva."},"3.3":{"id":"3.3","title":"Pohodlný začiatok Š","type":"linking","steps":["Jemne začni hlásku Š.","Pokračuj zvyškom slova.","Povedz „škola“ vlastným tempom."],"hint":"Š nemusíš nasilu predlžovať.","caption":"Š → škola","guide":"Skús pohodlne začať hlásku Š a pokračovať do slova bez núteného predlžovania. Napríklad: škola."},"3.4":{"id":"3.4","title":"Skupina spoluhlások","type":"contact","steps":["Pozri sa na prvé hlásky slova.","Začni ich pohodlne bez tlačenia.","Dopovedz „štvrtok“ svojím tempom."],"hint":"Cieľom je povedať slovo, nie dodržať časový limit.","caption":"ŠT → štvrtok","guide":"Pri skupine spoluhlások začni pohodlne a dopovedz celé slovo vlastným tempom. Napríklad: štvrtok."},"3.5":{"id":"3.5","title":"Začiatok dlhšieho slova","type":"contact","steps":["Vyber si slovo.","Začni prvú hlásku ľahko.","Pokračuj celým slovom."],"hint":"Nemusíš kontrolovať každú hlásku zvlášť.","caption":"K → knižnica","guide":"V dlhšom slove skús ľahký začiatok a zvyšok povedz po svojom. Napríklad: knižnica."},"4.1":{"id":"4.1","title":"Odpoveď pri platení","type":"conversation","steps":["Vypočuj si otázku o platení.","Daj si čas na odpoveď.","Povedz spôsob platby vlastnými slovami."],"hint":"Nemusíš použiť konkrétnu formuláciu.","caption":"otázka → vlastná odpoveď","guide":"Vypočuj si otázku o platení. Môžeš sa na chvíľu zastaviť a odpovedať vlastnými slovami."},"4.2":{"id":"4.2","title":"Odpoveď na zákaznícku kartu","type":"conversation","steps":["Vypočuj si otázku o karte.","Rozhodni sa, čo chceš povedať.","Odpovedz svojím tempom."],"hint":"Odpoveď môže byť krátka alebo dlhšia.","caption":"otázka → rozhodnutie → odpoveď","guide":"Vypočuj si otázku o zákazníckej karte. Rozhodni sa, čo chceš povedať, a odpovedz po svojom."},"4.3":{"id":"4.3","title":"Odpoveď na otázku o bločku","type":"conversation","steps":["Vypočuj si otázku o bločku.","Rozhodni sa, či ho chceš.","Odpovedz vlastnými slovami."],"hint":"Odpoveď nie je predpísaná.","caption":"otázka → odpoveď","guide":"Vypočuj si otázku o bločku. Rozhodni sa podľa seba a povedz odpoveď vlastnými slovami."},"4.4":{"id":"4.4","title":"Odpoveď na otázku o taške","type":"conversation","steps":["Vypočuj si otázku o taške.","Premysli si, čo potrebuješ.","Odpovedz po svojom."],"hint":"Nie je potrebná presná veta.","caption":"otázka → odpoveď","guide":"Vypočuj si otázku o taške. Premysli si, čo potrebuješ, a odpovedz vlastnými slovami."},"4.5":{"id":"4.5","title":"Viac otázok pri pokladni","type":"pause","steps":["Vypočuj si jednu otázku.","Odpovedz vlastnými slovami.","Medzi otázkami si dopraj chvíľu."],"hint":"Pauza je možnosť, nie povinnosť.","caption":"otázka · pauza · odpoveď","guide":"Pri viacerých otázkach postupuj po jednej. Ak chceš, medzi otázkou a odpoveďou si dopraj chvíľu."},"5.1":{"id":"5.1","title":"Telefonát s kuriérom","type":"conversation","steps":["Vypočuj si, kto volá.","Povedz, čo potrebuješ.","Pokračuj vlastným tempom."],"hint":"Pri telefonáte si môžeš dať čas aj na prvé slová.","caption":"počúvam → odpovedám","guide":"Predstav si telefonát s kuriérom. Vypočuj si volajúceho a odpovedz svojím spôsobom."},"5.2":{"id":"5.2","title":"Telefonát do ambulancie","type":"conversation","steps":["Vypočuj si úvod hovoru.","Povedz, s čím voláš.","Ak chceš, opýtaj sa na termín."],"hint":"Môžeš použiť vlastnú situáciu a vlastné slová.","caption":"počúvam → môj dôvod","guide":"Pri telefonáte do ambulancie si vypočuj úvod a povedz vlastnými slovami, s čím voláš."},"5.3":{"id":"5.3","title":"Telefonát do servisu","type":"conversation","steps":["Vypočuj si otázku zo servisu.","Stručne opíš, čo potrebuješ.","Doplň podrobnosti podľa seba."],"hint":"Nemusíš pripraviť dokonalé vysvetlenie.","caption":"otázka → môj opis","guide":"V telefonáte do servisu sa môžeš najprv krátko zastaviť. Potom povedz vlastnými slovami, čo potrebuješ."},"5.4":{"id":"5.4","title":"Nečakaný hovor s kuriérom","type":"conversation","steps":["Vypočuj si volajúceho.","Daj si chvíľu na reakciu.","Odpovedz, čo potrebuješ povedať."],"hint":"Aj pri nečakanom hovore máš čas hovoriť po svojom.","caption":"zazvoní → počúvam → odpovedám","guide":"Pri nečakanom hovore si môžeš vypočuť otázku a dať si chvíľu na odpoveď. Hovor vlastným tempom."},"5.5":{"id":"5.5","title":"Uzavretie rozhovoru","type":"pause","steps":["Vypočuj si poslednú otázku.","Povedz, čo ešte chceš doplniť.","Rozlúč sa vlastnými slovami."],"hint":"Pauza pred rozlúčkou je v poriadku.","caption":"odpoveď · pauza · rozlúčka","guide":"Na konci rozhovoru môžeš povedať, čo ešte potrebuješ, a rozlúčiť sa vlastnými slovami."}};
   let demoPlayer = null;
+  let demoTimer = null;
   function stopDemo() {
+    if (demoTimer) { clearTimeout(demoTimer); demoTimer = null; }
     if (demoPlayer) { demoPlayer.pause(); demoPlayer.currentTime = 0; demoPlayer = null; }
   }
-  function renderDemo(container, index) {
-    const example = techniqueExamples[index];
+  function renderDemo(container, example) {
     container.replaceChildren();
     if (!example) return;
-    const visual = document.createElement("div"); visual.className = "technique-visual"; visual.dataset.technique = demoTypes[index];
-    visual.innerHTML = '<div class="technique-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div><span></span>';
-    visual.querySelector("span").textContent = demoCaptions[index];
-    const button = document.createElement("button"); button.type = "button"; button.className = "technique-audio"; button.textContent = "▶ Vypočuť príklad";
+    const visual = document.createElement("div"); visual.className = "technique-visual guided-technique"; visual.dataset.technique = example.type; visual.dataset.stage = "0";
+    visual.innerHTML = '<div class="technique-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div><div class="technique-stage-copy"><strong></strong><span aria-live="polite"></span></div>';
+    visual.querySelector("strong").textContent = example.caption;
+    const current = visual.querySelector("span");
+    const steps = document.createElement("div"); steps.className = "technique-stage-buttons"; steps.setAttribute("role", "group"); steps.setAttribute("aria-label", "Kroky ukážky");
+    function selectStage(index) {
+      visual.dataset.stage = String(index); current.textContent = example.steps[index];
+      [...steps.children].forEach((button, i) => button.setAttribute("aria-pressed", String(i === index)));
+    }
+    example.steps.forEach((step, index) => {
+      const button = document.createElement("button"); button.type = "button"; button.textContent = String(index + 1); button.setAttribute("aria-label", "Krok " + (index + 1) + ": " + step);
+      button.onclick = () => { if (demoTimer) clearTimeout(demoTimer); demoTimer = null; selectStage(index); }; steps.append(button);
+    });
+    const button = document.createElement("button"); button.type = "button"; button.className = "technique-audio"; button.textContent = "▶ Vypočuť postup";
     const info = document.createElement("small"); info.className = "technique-audio-info";
-    info.textContent = "Animácia znázorňuje postup. Hlas je prirodzená výslovnosť príkladu, techniku si skús podľa seba.";
+    info.textContent = "Slovenská nahrávka slovne vysvetľuje postup a príklad. Animácia je ilustračná.";
     button.onclick = () => {
-      if (document.body.classList.contains("in-lesson") && document.getElementById("startBtn")?.disabled) { info.textContent = "Príklad si môžeš prehrať pred ďalším pokusom."; return; }
-      stopDemo(); const audio = demoPlayer = new Audio(`/audio/scenarios/glide-technique-${demoTypes[index]}.mp3`);
+      if (document.body.classList.contains("in-lesson") && document.getElementById("startBtn")?.disabled) { info.textContent = "Postup si môžeš prehrať pred ďalším pokusom."; return; }
+      stopDemo(); selectStage(0);
+      if (!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+        let stage = 0; const advance = () => { stage++; if (stage < example.steps.length) { selectStage(stage); demoTimer = setTimeout(advance, 2600); } else demoTimer = null; };
+        demoTimer = setTimeout(advance, 2600);
+      }
+      const audio = demoPlayer = new Audio('/audio/scenarios/glide-lesson-guide-' + example.id.replace('.', '-') + '.mp3');
       audio.onended = () => { if (demoPlayer === audio) demoPlayer = null; };
-      audio.play().catch(() => { if (demoPlayer === audio) { demoPlayer = null; info.textContent = "Ukážku sa nepodarilo prehrať. Postup si môžeš prečítať vyššie."; } });
+      audio.play().catch(() => { if (demoPlayer === audio) { demoPlayer = null; info.textContent = "Nahrávku sa nepodarilo prehrať. Kroky si môžeš prečítať a vybrať vyššie."; } });
     };
-    container.append(visual, button, info);
+    container.append(visual, steps, button, info);
+    if (example.type === 'onset' || example.type === 'contact') {
+      const video = document.createElement('a'); video.target = '_blank'; video.rel = 'noopener noreferrer';
+      video.href = example.type === 'onset' ? 'https://theadultspeechtherapyworkbook.com/easy-onset/' : 'https://www.youtube.com/watch?v=wvTb293s_Uc';
+      video.textContent = 'Pozrieť odbornú videoukážku (anglicky) ↗'; video.className = 'technique-expert-link'; container.append(video);
+    }
+    selectStage(0);
   }
   document.getElementById("startBtn")?.addEventListener("click", stopDemo, true);
   document.getElementById("exitLessonBtn")?.addEventListener("click", stopDemo, true);
@@ -199,13 +193,13 @@
       ? "POKRAČOVAŤ V LEKCII"
       : "SPUSTIŤ TRÉNING";
     const technique = document.getElementById("lessonTechnique");
-    const example = techniqueExamples[Number(level.id.split(".")[0]) - 1];
+    const example = lessonGuides[level.id];
     technique.open = false;
     technique.hidden = !example;
     if (!example) return;
     document.getElementById("lessonTechniqueTitle").textContent = example.title;
     document.getElementById("lessonTechniqueHint").textContent = example.hint;
-    renderDemo(document.getElementById("lessonTechniqueDemo"), Number(level.id.split(".")[0]) - 1);
+    renderDemo(document.getElementById("lessonTechniqueDemo"), example);
     document.getElementById("lessonTechniqueSteps").replaceChildren(
       ...example.steps.map((step) => {
         const item = document.createElement("li");
@@ -263,8 +257,7 @@
   model.loadNextItem = function () {
     next();
     if (!this.isSosDrill && this.pathSession && this.isLessonActive) {
-      const demoIndex = Number(this.currentLevel?.id?.split(".")[0]) - 1;
-      const demo = techniqueExamples[demoIndex];
+      const demo = lessonGuides[this.currentLevel?.id];
       activeTechnique.hidden = !demo;
       activeTechnique.open = false;
       const hintSummary = document.querySelector(".lesson-hint > summary");
@@ -273,7 +266,7 @@
         activeTechnique.querySelector("strong").textContent = demo.title;
         activeTechnique.querySelector("p").textContent = demo.hint;
         activeTechnique.querySelector("ol").replaceChildren(...demo.steps.map(step => { const item = document.createElement("li"); item.textContent = step; return item; }));
-        renderDemo(activeTechnique.querySelector("div"), demoIndex);
+        renderDemo(activeTechnique.querySelector("div"), demo);
       }
       save(this);
       const item = this.currentWordItem;

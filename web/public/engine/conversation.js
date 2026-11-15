@@ -82,7 +82,7 @@
       voiceGender: "male",
       goal: "",
       opening: "Haló, prosím?",
-      audioUrl: "/audio/scenarios/glide-own-opening.mp3",
+      audioUrl: "/audio/scenarios/glide-own-opening-base.mp3",
       branches: [
         [
           "Doplniť podrobnosti",
@@ -147,9 +147,40 @@
   };
   const recordedUrl = (id) => "/audio/scenarios/glide-" + id + ".mp3";
 
+  const extraQuestions = {
+    cafe: "Dáte si ešte niečo?",
+    doctor: "Môžem vám ešte s niečím pomôcť?",
+    shop: "Prosíte si aj bloček?",
+    own: "Je ešte niečo, čo by ste chceli doplniť?",
+  };
+  const alternateOpenings = {
+    cafe: "cafe-opening-v2-alt",
+    shop: "shop-opening-v2-alt",
+    own: "own-opening-alt",
+  };
+  const turns = new Map();
+  function nextTurn(sceneId) {
+    const storageKey = "glide_conversation_turn_" + sceneId;
+    let next = turns.get(sceneId) || 0;
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved === "0" || saved === "1") next = Number(saved);
+      localStorage.setItem(storageKey, String(1 - next));
+    } catch (_) {}
+    turns.set(sceneId, 1 - next);
+    return next;
+  }
+  function lineUrl(plan, name) {
+    return recordedUrl(name + (plan.alternateVoice ? "-alt" : ""));
+  }
+
   function create(sceneId, goal) {
     const scene = scenes[sceneId];
-    const openingAudio = scene.openingVoices ? takeDoctorVoice(scene.openingVoices) : scene.audioUrl;
+    const turn = nextTurn(sceneId);
+    const openingAudio = scene.openingVoices
+      ? takeDoctorVoice(scene.openingVoices)
+      : turn ? recordedUrl(alternateOpenings[sceneId]) : scene.audioUrl;
+    const alternateVoice = scene.openingVoices ? openingAudio.includes("-leda.mp3") : !!turn;
     const question = (promptText, audioUrl = null) => ({
       category: "conversation",
       caller: scene.caller,
@@ -163,10 +194,14 @@
       title: scene.title,
       goal,
       waitingForChoice: false,
+      alternateVoice,
+      alternateQuestion: !!turn,
+      ambience: byId("conversationAmbience").checked,
+      ambienceVolume: Number(byId("conversationAmbienceVolume").value),
       tasks: [
         { word: "Začni rozhovor", question: question(scene.opening, openingAudio) },
-        { word: "Reaguj vlastnými slovami", question: question(scene.branches.at(-1)[2], recordedUrl(recordedLines[sceneId].branches.at(-1))) },
-        { word: "Ukonči rozhovor", question: question(scene.closing, recordedUrl(recordedLines[sceneId].closing)) },
+        { word: "Reaguj vlastnými slovami", question: question(scene.branches.at(-1)[2], recordedUrl(recordedLines[sceneId].branches.at(-1) + (alternateVoice ? "-alt" : ""))) },
+        { word: "Ukonči rozhovor", question: question(turn ? extraQuestions[sceneId] : scene.closing, recordedUrl((turn ? sceneId + "-followup" : recordedLines[sceneId].closing) + (alternateVoice ? "-alt" : ""))) },
       ].map((task) => ({ ...task, freeReply: true, attempts: 0 })),
     };
   }
@@ -190,6 +225,10 @@
       <select id="conversationScene" data-glide-select="scene-cards" aria-label="Situácia" aria-hidden="true" tabindex="-1" class="conversation-scene-select"></select>
       <label for="conversationGoal">Čo chceš povedať alebo vybaviť?</label>
       <textarea id="conversationGoal" maxlength="140" rows="2" required></textarea>
+      <div class="conversation-ambience-options">
+        <label class="conversation-ambience-toggle"><input id="conversationAmbience" type="checkbox"> Jemný ruch v pozadí</label>
+        <label class="conversation-ambience-volume" for="conversationAmbienceVolume">Hlasitosť ruchu <input id="conversationAmbienceVolume" type="range" min="0" max="15" value="5"></label>
+      </div>
       <button class="btn-3d green full" id="conversationStart">Začať rozhovor</button>
     </form>
     <button type="button" id="conversationPending" class="conversation-pending" hidden><span>Tvoj plán</span><strong id="conversationPendingTitle"></strong><span id="conversationPendingGoal"></span><span>Zaznamenať, ako to dopadlo →</span></button>
@@ -446,7 +485,45 @@
   };
   byId("celebrationSub").after(recap);
 
+  let ambienceAudio = null;
+  let ambiencePlan = null;
+  const ambienceButton = document.createElement("button");
+  ambienceButton.type = "button";
+  ambienceButton.className = "conversation-ambience-mute";
+  ambienceButton.hidden = true;
+  document.querySelector(".lesson-toggles")?.append(ambienceButton);
+  ambienceButton.onclick = () => {
+    if (!ambienceAudio) return;
+    ambienceAudio.muted = !ambienceAudio.muted;
+    ambienceButton.textContent = ambienceAudio.muted ? "Zapnúť ruch" : "Stíšiť ruch";
+    ambienceButton.setAttribute("aria-pressed", String(ambienceAudio.muted));
+  };
+  function stopAmbience() {
+    if (ambienceAudio) { ambienceAudio.pause(); ambienceAudio.currentTime = 0; }
+    ambienceAudio = null;
+    ambiencePlan = null;
+    ambienceButton.hidden = true;
+  }
+  function startAmbience(plan) {
+    if (!plan?.ambience || ambiencePlan === plan) return;
+    stopAmbience();
+    ambiencePlan = plan;
+    ambienceAudio = new Audio(plan.sceneId === "cafe" || plan.sceneId === "shop"
+      ? "/audio/scenarios/glide-cafe-ambience.mp3" : "/audio/scenarios/glide-room-ambience.mp3");
+    ambienceAudio.loop = true;
+    ambienceAudio.volume = Math.max(0, Math.min(15, Number(plan.ambienceVolume) || 0)) / 100;
+    ambienceButton.textContent = "Stíšiť ruch";
+    ambienceButton.setAttribute("aria-pressed", "false");
+    ambienceButton.hidden = false;
+    const player = ambienceAudio;
+    player.play().catch(() => { if (ambienceAudio === player) stopAmbience(); });
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && ambiencePlan) { ambiencePlan.ambience = false; stopAmbience(); }
+  });
+
   function reset() {
+    stopAmbience();
     choiceBox.hidden = true;
     choiceBox.replaceChildren();
     byId("drawerContinueBtn").disabled = false;
@@ -456,15 +533,15 @@
   function afterAttempt(lesson, result) {
     const plan = lesson.conversation;
     if (!plan || !result.passed) return;
-    if (lesson.completedItemsCount === 2 && plan.sceneId === "cafe") {
+    if (lesson.completedItemsCount === 2 && plan.sceneId === "cafe" && !plan.alternateQuestion) {
       const closing = lesson.lessonQueue[0]?.question;
       if (closing && result.conversationChoice === 0) {
         closing.promptText = "Zabalím vám objednávku so sebou. Je to všetko?";
-        closing.audioUrl = recordedUrl("cafe-close-takeaway");
+        closing.audioUrl = lineUrl(plan, "cafe-close-takeaway");
       }
       if (closing && result.conversationChoice === 1) {
         closing.promptText = "Prinesiem vám objednávku k stolu. Je to všetko?";
-        closing.audioUrl = recordedUrl("cafe-close-table");
+        closing.audioUrl = lineUrl(plan, "cafe-close-table");
       }
     }
     if (lesson.completedItemsCount !== 1) return;
@@ -475,7 +552,7 @@
       const branch = scene.branches[index];
       if (!branch || !next) return;
       next.question.promptText = branch[2];
-      next.question.audioUrl = recordedUrl(recordedLines[plan.sceneId].branches[index]);
+      next.question.audioUrl = lineUrl(plan, recordedLines[plan.sceneId].branches[index]);
       plan.waitingForChoice = false;
       continueButton.disabled = false;
       choiceBox.hidden = true;
@@ -504,9 +581,12 @@
 
   window.GlideConversation = {
     interpret,
+    startAmbience,
+    stopAmbience,
     afterAttempt,
     reset,
     showRecap(plan) {
+      stopAmbience();
       recap.hidden = !plan;
     },
   };

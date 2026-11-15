@@ -438,6 +438,7 @@ window.setupAudio = setupAudio;
 
 // Microphone permission is requested only by an explicit audio action.
 window.releaseGlideAudio = function () {
+  window.GlideConversation?.stopAmbience();
   audioGeneration++;
   audioSetupPromise = null;
   abortActiveDspSession();
@@ -816,6 +817,7 @@ function runGuillotineMode(meta) {
   if (startBtn) startBtn.disabled = true;
   if (targetWord) targetWord.classList.add("expose");
   setPacerText(duoLesson?.conversation ? "Počúvaj…" : "Pokladňa...");
+  if (duoLesson?.conversation) window.GlideConversation?.startAmbience(duoLesson.conversation);
   if (pacerCircle) pacerCircle.style.borderColor = "#ffc800";
 
   let cashierScenario;

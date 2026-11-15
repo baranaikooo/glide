@@ -169,3 +169,39 @@ test("shop asks about payment and follows the selected response", async ({ page 
   expect(next.promptText).toBe("Dobre, môžete priložiť kartu.");
   expect(next.audioUrl).toContain("glide-shop-card-v2.mp3");
 });
+
+test("conversation alternates voice and closing question between attempts", async ({ page }) => {
+  for (const alternate of [false, true]) {
+    await open(page);
+    await page.locator("#sidebarTabRozhovory").click();
+    await page.getByRole("button", { name: "Začať rozhovor", exact: true }).click();
+    const plan = await page.evaluate(() => duoLesson.conversation);
+    expect(plan.alternateVoice).toBe(alternate);
+    expect(plan.tasks[0].question.audioUrl.includes("-alt.mp3")).toBe(alternate);
+    expect(plan.tasks[2].question.promptText === "Dáte si ešte niečo?").toBe(alternate);
+    expect(plan.tasks[2].question.audioUrl.includes("-alt.mp3")).toBe(alternate);
+  }
+});
+
+test("optional ambience can be muted and stops on audio release", async ({ page }) => {
+  await open(page);
+  await page.locator("#sidebarTabRozhovory").click();
+  await page.locator("#conversationAmbience").check();
+  await page.getByRole("button", { name: "Začať rozhovor", exact: true }).click();
+  const state = await page.evaluate(() => {
+    const players = [];
+    window.Audio = class {
+      constructor(url) { this.url = url; players.push(this); }
+      play() { this.played = true; return Promise.resolve(); }
+      pause() { this.paused = true; }
+    };
+    GlideConversation.startAmbience(duoLesson.conversation);
+    document.querySelector(".conversation-ambience-mute").click();
+    const result = { count: players.length, volume: players[0].volume, muted: players[0].muted };
+    window.releaseGlideAudio();
+    result.paused = players[0].paused;
+    result.hidden = document.querySelector(".conversation-ambience-mute").hidden;
+    return result;
+  });
+  expect(state).toEqual({ count: 1, volume: 0.05, muted: true, paused: true, hidden: true });
+});

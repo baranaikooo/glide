@@ -92,12 +92,16 @@ test("a real-life plan survives reload and adds optional reflection to the same 
   await page.locator("#sidebarTabRozhovory").click();
 
   await page.getByRole("button", { name: "Môj skutočný rozhovor" }).click();
+  await expect(page.locator("#conversationSceneCards")).toBeHidden();
+  await page.locator("#conversationLifeGoal").fill("Objednať sa k lekárovi");
   await page.locator("#conversationBeforeRating").getByText("Napäto", { exact: true }).click();
-  await page.getByRole("button", { name: "Uložiť plán" }).click();
+  await page.getByRole("button", { name: "Uložiť môj plán" }).click();
   await open(page);
   await page.locator("#sidebarTabRozhovory").click();
 
   await page.getByRole("button", { name: "Môj skutočný rozhovor" }).click();
+  await expect(page.locator("#conversationPending")).toContainText("Objednať sa k lekárovi");
+  await page.locator("#conversationPending").click();
   await expect(page.getByRole("heading", { name: "Po rozhovore" })).toBeVisible();
   const reflection = page.locator("#conversationCheckinForm");
   await reflection.getByText("Áno", { exact: true }).click();
@@ -112,7 +116,7 @@ test("a real-life plan survives reload and adds optional reflection to the same 
   expect(saved.plan).toBeNull();
   expect(saved.entries).toHaveLength(1);
   expect(saved.entries[0]).toMatchObject({
-    sceneId: "cafe", beforeFeeling: "tense", afterFeeling: "calm", helpedBy: ["pause"],
+    sceneId: "own", goal: "Objednať sa k lekárovi", beforeFeeling: "tense", afterFeeling: "calm", helpedBy: ["pause"],
   });
 });
 

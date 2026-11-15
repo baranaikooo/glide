@@ -192,13 +192,15 @@
       <textarea id="conversationGoal" maxlength="140" rows="2" required></textarea>
       <button class="btn-3d green full" id="conversationStart">Začať rozhovor</button>
     </form>
-    <button type="button" id="conversationPending" class="conversation-pending" hidden><span>Rozpracovaný rozhovor</span><strong id="conversationPendingTitle"></strong><span>Vrátiť sa k rozhovoru →</span></button>
+    <button type="button" id="conversationPending" class="conversation-pending" hidden><span>Tvoj plán</span><strong id="conversationPendingTitle"></strong><span id="conversationPendingGoal"></span><span>Zaznamenať, ako to dopadlo →</span></button>
     <section id="conversationCheckin" hidden>
       <form id="conversationBeforeForm">
-        <h3>Pred rozhovorom</h3>
+        <div class="life-heading"><span aria-hidden="true">✎</span><div><h3>Môj ďalší krok</h3><p>Naplánuj si rozhovor, ktorý chceš skúsiť.</p></div></div>
+        <label for="conversationLifeGoal">Čo chceš vybaviť alebo povedať?</label>
+        <textarea id="conversationLifeGoal" maxlength="140" rows="2" placeholder="Napríklad objednať sa k lekárovi"></textarea>
         <fieldset class="conversation-rating" id="conversationBeforeRating"></fieldset>
-        <button type="submit" class="btn-3d green full">Uložiť plán</button>
-        <button type="button" id="conversationAlreadyDone" class="lesson-quiet-action">Rozhovor už prebehol</button>
+        <button type="submit" class="btn-3d green full">Uložiť môj plán</button>
+        <button type="button" id="conversationAlreadyDone" class="lesson-quiet-action">Chcem zaznamenať rozhovor, ktorý už prebehol</button>
       </form>
       <form id="conversationCheckinForm">
         <h3>Po rozhovore</h3>
@@ -240,6 +242,7 @@
   const lifeMode = byId("conversationLifeMode");
   let openedFor;
   let pending;
+  let lifeSceneId = "own";
   const key = () =>
     "glide_conversations_v1_" + (window.fluencyAuth?.getCurrentUser()?.id || "guest");
   const draftKey = () => key() + ":plan";
@@ -306,24 +309,31 @@
       : "Aplikácia prehrá repliky a ty odpovedáš vlastnými slovami.";
     practiceMode.setAttribute("aria-pressed", String(!life));
     lifeMode.setAttribute("aria-pressed", String(life));
-    checkin.hidden = !life;
-    byId("conversationPending").hidden = !pending || life;
-    byId("conversationStart").hidden = life;
+    dialog.dataset.mode = life ? "life" : "practice";
+    byId("conversationForm").hidden = life;
+    const hasPendingCard = life && !!pending && !after;
+    byId("conversationPending").hidden = !hasPendingCard;
+    checkin.hidden = !life || hasPendingCard;
     beforeForm.hidden = after;
     afterForm.hidden = !after;
-    if (life && pending) select(pending.sceneId, pending.goal);
+    if (life && pending) {
+      lifeSceneId = pending.sceneId;
+      byId("conversationLifeGoal").value = pending.goal;
+    }
   }
 
   function selectedSituation() {
-    const sceneId = sceneSelect.value;
-    const goal = goalInput.value.trim();
+    const life = lifeMode.getAttribute("aria-pressed") === "true";
+    const sceneId = life ? lifeSceneId : sceneSelect.value;
+    const activeInput = life ? byId("conversationLifeGoal") : goalInput;
+    const goal = activeInput.value.trim();
     if (openedFor !== key()) {
       status.textContent = "Účet sa zmenil. Otvor rozhovor znova.";
       return null;
     }
     if (!scenes[sceneId] || !goal) {
       status.textContent = "Doplň, čo chceš povedať alebo vybaviť.";
-      goalInput.focus();
+      activeInput.focus();
       return null;
     }
     return { sceneId, goal };
@@ -341,8 +351,11 @@
     const last = entries.at(-1);
     const next = plan?.sceneId || (last ? recommend(last) : "cafe");
     select(next, plan?.goal ?? (last?.sceneId === next ? last.goal : undefined));
+    lifeSceneId = plan?.sceneId || pending?.sceneId || "own";
+    byId("conversationLifeGoal").value = plan?.goal || pending?.goal || "";
     byId("conversationPendingTitle").textContent = pending ? scenes[pending.sceneId].title : "";
-    showMode(!!plan, !!plan || !!pending);
+    byId("conversationPendingGoal").textContent = pending?.goal || "";
+    showMode(!!plan, !!plan);
     const successes = entries.filter((entry) => entry.outcome === "yes").length;
     status.textContent = last
       ? `Zaznamenané rozhovory: ${entries.length}. Cieľ splnený: ${successes}. Návrh na nácvik: ${scenes[recommend(last)].title}.`
@@ -351,7 +364,7 @@
   }
   byId("conversationPending").onclick = () => showMode(true, true);
   practiceMode.onclick = () => showMode(false);
-  lifeMode.onclick = () => showMode(true, !!pending);
+  lifeMode.onclick = () => showMode(true);
   byId("conversationAlreadyDone").onclick = () => {
     showMode(true, true);
     afterForm.querySelector("button").focus({ preventScroll: true });
@@ -365,7 +378,8 @@
       localStorage.setItem(draftKey(), JSON.stringify(draft));
       pending = draft;
       byId("conversationPendingTitle").textContent = scenes[draft.sceneId].title;
-      showMode(true, true);
+      byId("conversationPendingGoal").textContent = draft.goal;
+      showMode(true);
       status.textContent = "Plán je uložený. Po rozhovore sa môžeš vrátiť k záznamu.";
     } catch {
       status.textContent = "Plán sa nepodarilo uložiť na tomto zariadení.";
@@ -404,7 +418,9 @@
       }
       beforeForm.reset();
       afterForm.reset();
-      showMode(true, !!pending);
+      lifeSceneId = "own";
+      byId("conversationLifeGoal").value = "";
+      showMode(true);
       const next = recommend(entry);
       select(next, next === entry.sceneId ? entry.goal : undefined);
       status.textContent = `Záznam uložený. Nabudúce skús: ${scenes[next].title}.`;

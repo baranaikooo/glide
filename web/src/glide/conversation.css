@@ -178,3 +178,14 @@
 .conversation-surface .conversation-scene-item .conversation-scene-card { flex-direction:column; align-items:flex-start; justify-content:flex-start; gap:7px; min-height:100px; padding:10px 12px; }
 .conversation-scene-item .conversation-scene-icon { width:28px; height:28px; flex-basis:28px; font-size:16px; }
 .conversation-scene-item .conversation-scene-card > span:last-child { width:100%; overflow-wrap:normal; word-break:normal; }
+/* Compact situation picker while keeping names readable and controls easy to tap. */
+.conversation-surface .conversation-scene-cards { gap:8px; }
+.conversation-surface .conversation-scene-item .conversation-scene-card {
+  flex-direction:row; align-items:center; justify-content:flex-start; gap:7px;
+  min-height:56px; padding:7px 42px 7px 8px; font-size:12px; line-height:1.25;
+}
+.conversation-scene-item .conversation-scene-icon { width:26px; height:26px; flex:0 0 26px; font-size:15px; }
+.conversation-scene-item .conversation-scene-card > span:last-child { width:auto; min-width:0; overflow-wrap:normal; word-break:normal; }
+.conversation-scene-item .conversation-favorite { top:50%; right:0; width:40px; height:44px; transform:translateY(-50%); font-size:20px; }
+@media (min-width:700px) { .conversation-surface .conversation-scene-item .conversation-scene-card { min-height:56px; } }
+@media (max-width:360px) { .conversation-surface #conversationForm { padding:12px; } .conversation-surface .conversation-scene-item .conversation-scene-card { font-size:11px; gap:5px; } }

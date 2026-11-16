@@ -150,23 +150,20 @@
     const info = document.createElement("small"); info.className = "technique-audio-info";
     info.textContent = Number(example.id.split(".")[0]) >= 4
       ? "AI hlas je len príklad. V rozhovore odpovedz vlastnými slovami."
-      : "AI hlas je ilustračný príklad; nejde o logopédom overenú ukážku techniky.";
+      : "AI hlas je ilustračný a nie je logopédom overený. Presné vykonanie techniky si môžeš overiť s logopédom.";
     button.onclick = () => {
       if (document.body.classList.contains("in-lesson") && document.getElementById("startBtn")?.disabled) { info.textContent = "Postup si môžeš prehrať pred ďalším pokusom."; return; }
       stopDemo(); selectStage(0);
       const audio = demoPlayer = new Audio('/audio/scenarios/glide-lesson-example-' + example.id.replace('.', '-') + '.mp3');
       const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-      audio.ontimeupdate = () => {
-        if (!reducedMotion && Number.isFinite(audio.duration) && audio.duration > 0) selectStage(Math.min(2, Math.floor(audio.currentTime / audio.duration * 3)));
-      };
       audio.onended = () => { if (demoPlayer === audio) { demoPlayer = null; if (!reducedMotion) selectStage(2); } };
       audio.play().catch(() => { if (demoPlayer === audio) { demoPlayer = null; info.textContent = "Nahrávku sa nepodarilo prehrať. Kroky si môžeš prečítať a vybrať vyššie."; } });
     };
     container.append(visual, steps, button, info);
-    if (example.type === 'onset' || example.type === 'contact') {
+    if (example.type === 'onset' || example.type === 'contact' || example.type === 'linking') {
       const video = document.createElement('a'); video.target = '_blank'; video.rel = 'noopener noreferrer';
-      video.href = example.type === 'onset' ? 'https://theadultspeechtherapyworkbook.com/easy-onset/' : 'https://www.youtube.com/watch?v=wvTb293s_Uc';
-      video.textContent = 'Pozrieť odbornú videoukážku (anglicky) ↗'; video.className = 'technique-expert-link'; container.append(video);
+      video.href = 'https://www.asha.org/practice-portal/clinical-topics/fluency-disorders/';
+      video.textContent = 'Odborný zdroj k technikám (anglicky) ↗'; video.className = 'technique-expert-link'; container.append(video);
     }
     selectStage(0);
   }

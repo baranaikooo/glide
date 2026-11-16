@@ -95,6 +95,6 @@ test('every lesson has its own spoken example and topic-specific steps', async (
   expect(guideResults.find(x=>x.id==='3.1').title).toContain('pri P');
   expect(guideResults.find(x=>x.id==='4.3').title).toContain('bločku');
   expect(guideResults.find(x=>x.id==='5.2').title).toContain('ambulancie');
-  expect(guideResults.find(x=>x.id==='1.1').expert).toContain('easy-onset');
-  expect(guideResults.find(x=>x.id==='3.1').expert).toContain('youtube.com');
+  expect(guideResults.find(x=>x.id==='1.1').expert).toContain('asha.org/practice-portal/clinical-topics/fluency-disorders');
+  expect(guideResults.find(x=>x.id==='3.1').expert).toContain('asha.org/practice-portal/clinical-topics/fluency-disorders');
 });

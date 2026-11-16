@@ -1,4 +1,4 @@
-const CACHE = "glide-light-v52";
+const CACHE = "glide-light-v53";
 const ASSETS = [
   "/",
   "/manifest.json",

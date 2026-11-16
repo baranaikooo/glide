@@ -276,7 +276,6 @@
       <label for="conversationGoal">Čo chceš povedať alebo vybaviť?</label>
       <textarea id="conversationGoal" maxlength="140" rows="2" required></textarea>
       <button class="btn-3d green full" id="conversationStart">Začať rozhovor</button>
-      <div class="situation-actions"><button type="button" id="personalMapLesson">Lekcia v Ceste</button><button type="button" id="personalMapLife">Naplánovať malý krok</button></div>
       <small id="personalMapStatus" role="status"></small>
     </form>
     <button type="button" id="conversationPending" class="conversation-pending" hidden><span>Tvoj plán</span><strong id="conversationPendingTitle"></strong><span id="conversationPendingGoal"></span><span>Zaznamenať, ako to dopadlo →</span></button>
@@ -430,20 +429,6 @@
       container.append(item);
     }
   }
-  byId("personalMapLife").onclick = () => {
-    const sceneId = sceneSelect.value; if (!scenes[sceneId]) return;
-    if (pending) { byId("personalMapStatus").textContent = "Najprv dokonči alebo zaznamenaj uložený plán v časti Môj skutočný rozhovor."; return; }
-    lifeSceneId = sceneId; byId("conversationLifeGoal").value = goalInput.value.trim() || scenes[sceneId].goal;
-    showMode(true, false); byId("conversationLifeGoal").focus();
-  };
-  byId("personalMapLesson").onclick = () => {
-    const sceneId = sceneSelect.value; if (!scenes[sceneId]) return;
-    const lessonId = ({ cafe: "4.1", shop: "4.1", doctor: "5.2", job: "5.1", directions: "4.2", restaurant: "4.3", complaint: "5.3", own: "1.1" })[sceneId];
-    const world = WORLDS_DATA.find(item => item.levels.some(level => level.id === lessonId));
-    const level = world?.levels.find(item => item.id === lessonId);
-    if (!level || !duoState.isUnlocked(lessonId)) { byId("personalMapStatus").textContent = "Táto lekcia je zatiaľ zamknutá. Pokračuj v Ceste svojím tempom."; return; }
-    byId("navTabCesta").click(); duoLesson.openLevelPopover(level, world);
-  };
   const miniPrompts = [
     ["Čo sa ti dnes podarilo?", "Opíš niečo, čo máš práve na očiach.", "Čo by si si teraz rád/rada dal/a?"],
     ["Ktoré miesto máš rád/rada a prečo?", "Čo by si chcel/a robiť cez víkend?", "Akú hudbu si naposledy počúval/a?"],

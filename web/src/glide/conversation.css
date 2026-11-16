@@ -160,8 +160,6 @@
 .conversation-scene-item .conversation-favorite[aria-pressed="true"] { color:#8b68c8; background:var(--lavender-soft); }
 .conversation-scene-item .conversation-favorite:focus-visible { outline:3px solid #a69ae2; outline-offset:1px; }
 .conversation-favorite-hint { margin:-6px 0 0; color:var(--text-muted); font-size:11px; line-height:1.4; }
-.situation-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.situation-actions button { min-width:0; min-height:44px; padding:8px; border:1px solid var(--surface-border); border-radius:12px; background:var(--bg); color:var(--purple-hover); font:inherit; font-size:12px; font-weight:700; }
 #personalMapStatus { color:var(--text-muted); font-size:12px; line-height:1.4; }
 #personalMapStatus:empty { display:none; }
 .spontaneous-card { margin:0 0 14px; padding:14px; border-color:#d3c5eb; background:linear-gradient(135deg,#f2edff,#fbf8ff); box-shadow:0 8px 22px #6a4b9b13; }
@@ -186,6 +184,6 @@
 }
 .conversation-scene-item .conversation-scene-icon { width:26px; height:26px; flex:0 0 26px; font-size:15px; }
 .conversation-scene-item .conversation-scene-card > span:last-child { width:auto; min-width:0; overflow-wrap:normal; word-break:normal; }
-.conversation-scene-item .conversation-favorite { top:50%; right:0; width:40px; height:44px; transform:translateY(-50%); font-size:20px; }
+.conversation-scene-item .conversation-favorite { top:50%; right:3px; width:36px; height:44px; transform:translateY(-50%); font-size:16px; }
 @media (min-width:700px) { .conversation-surface .conversation-scene-item .conversation-scene-card { min-height:56px; } }
 @media (max-width:360px) { .conversation-surface #conversationForm { padding:12px; } .conversation-surface .conversation-scene-item .conversation-scene-card { font-size:11px; gap:5px; } }

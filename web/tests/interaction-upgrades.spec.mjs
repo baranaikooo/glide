@@ -13,8 +13,7 @@ test('one situation picker preserves saved favorites and links to practice, less
   await page.getByRole('button',{name:'Pridať V kaviarni medzi obľúbené'}).click();
   await page.getByRole('button',{name:'V kaviarni',exact:true}).click();
   await expect(page.locator('.conversation-scene-card[data-scene="cafe"]')).toHaveAttribute('aria-pressed','true');
-  await page.locator('#personalMapLife').click();
-  await expect(page.locator('#conversationLifeGoal')).toHaveValue(/dve kávy/i);
+  await expect(page.locator('#personalMapLife, #personalMapLesson')).toHaveCount(0);
   await page.reload(); await expect(page.locator('html')).toHaveAttribute('data-engine','ready');
   await page.locator('#sidebarTabRozhovory').click();
   await expect(page.getByRole('button',{name:'Odobrať V kaviarni z obľúbených'})).toHaveAttribute('aria-pressed','true');
@@ -22,9 +21,7 @@ test('one situation picker preserves saved favorites and links to practice, less
   await page.getByRole('button',{name:'Odobrať V predajni z obľúbených'}).click();
   await expect(page.locator('#conversationSceneCards .conversation-scene-item').first()).toContainText('V kaviarni');
   await page.getByRole('button',{name:'Vlastná situácia',exact:true}).click();
-  await page.locator('#personalMapLesson').click();
-  await expect(page.locator('#nodePopoverBackdrop')).toHaveClass(/active/);
-  await expect(page.locator('#popoverTitle')).toContainText('1.1');
+  await expect(page.locator('.conversation-scene-card[data-scene=own]')).toHaveAttribute('aria-pressed','true');
 });
 test('conversation help repeats the current question and stops before recording', async ({page}) => {
   await open(page); await page.locator('#sidebarTabRozhovory').click();

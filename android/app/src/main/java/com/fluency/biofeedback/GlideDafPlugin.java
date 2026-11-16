@@ -4,6 +4,8 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.AudioManager;
+import android.media.AudioDeviceInfo;
+import android.media.AudioRecordingConfiguration;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -19,6 +21,7 @@ import com.getcapacitor.annotation.PermissionCallback;
 @CapacitorPlugin(name="GlideDaf", permissions={@Permission(alias="notifications", strings={Manifest.permission.POST_NOTIFICATIONS})})
 public class GlideDafPlugin extends Plugin {
     private final Handler main=new Handler(Looper.getMainLooper());
+    private volatile BluetoothAudioRoute exerciseRoute;
     @PluginMethod public void start(PluginCall call) {
         if(Build.VERSION.SDK_INT>=33 && ContextCompat.checkSelfPermission(getContext(),Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){ requestPermissionForAlias("notifications",call,"notificationResult"); return; }
         if (DafForegroundService.running) { call.resolve(new JSObject().put("active",true)); return; }
@@ -39,10 +42,48 @@ public class GlideDafPlugin extends Plugin {
     private void pollStart(PluginCall call,int tries) {
         if(DafForegroundService.running){call.resolve(new JSObject().put("active",true));return;}
         if(!DafForegroundService.error.isEmpty()){call.reject(DafForegroundService.error);return;}
-        if(tries>=40){getContext().stopService(new Intent(getContext(),DafForegroundService.class));call.reject("Asistent sa nespustil včas.");return;}
+        if(tries>=150){getContext().stopService(new Intent(getContext(),DafForegroundService.class));call.reject("Asistent sa nespustil včas.");return;}
         main.postDelayed(() -> pollStart(call,tries+1),100);
     }
-    @PluginMethod public void stop(PluginCall call){ getContext().stopService(new Intent(getContext(),DafForegroundService.class)); call.resolve(); }
+    /** Use the Bluetooth headset microphone in the WebView exercise session as well. */
+    @PluginMethod public void prepareExercise(PluginCall call) {
+        AudioManager manager=(AudioManager)getContext().getSystemService(android.content.Context.AUDIO_SERVICE);
+        AudioDeviceInfo output=DafForegroundService.headphones(manager);
+        if(!BluetoothAudioRoute.isBluetooth(output)){call.resolve(new JSObject().put("bluetooth",false));return;}
+        if(DafForegroundService.running){call.reject("Pred cvičením vypni DAF asistenta.");return;}
+        BluetoothAudioRoute route=new BluetoothAudioRoute(getContext());
+        exerciseRoute=route;
+        new Thread(() -> {
+            try { route.connect(); if(exerciseRoute!=route){route.close();call.reject("Zvuková relácia bola zrušená.");return;} call.resolve(new JSObject().put("bluetooth",true)); }
+            catch(Exception ex){route.close();if(exerciseRoute==route)exerciseRoute=null;call.reject(ex.getMessage()==null?"Mikrofón slúchadiel nie je dostupný.":ex.getMessage());}
+        },"Glide-headset-route").start();
+    }
+    @PluginMethod public void verifyExercise(PluginCall call) {
+        BluetoothAudioRoute route=exerciseRoute;
+        if(route==null){call.resolve();return;}
+        new Thread(() -> {
+            AudioManager manager=(AudioManager)getContext().getSystemService(android.content.Context.AUDIO_SERVICE);
+            try {
+                for(int n=0;n<30 && exerciseRoute==route;n++){
+                    for(AudioRecordingConfiguration config:manager.getActiveRecordingConfigurations()) {
+                        if(BluetoothAudioRoute.isBluetoothMic(config.getAudioDevice())) {call.resolve();return;}
+                    }
+                    Thread.sleep(100);
+                }
+                call.reject("Android nepotvrdil mikrofón slúchadiel. Skontroluj povolenie telefonovania pri slúchadlách v Bluetooth nastaveniach.");
+            } catch(Exception ex){call.reject("Mikrofón slúchadiel sa nepodarilo overiť.");}
+        },"Glide-headset-verify").start();
+    }
+    @PluginMethod public void releaseExercise(PluginCall call) {
+        BluetoothAudioRoute route=exerciseRoute;exerciseRoute=null;if(route!=null)route.close();call.resolve();
+    }
+    @Override protected void handleOnDestroy(){BluetoothAudioRoute route=exerciseRoute;exerciseRoute=null;if(route!=null)route.close();}
+    @PluginMethod public void stop(PluginCall call){ getContext().stopService(new Intent(getContext(),DafForegroundService.class)); pollStop(call,0); }
+    private void pollStop(PluginCall call,int tries){
+        if(!DafForegroundService.serviceActive){call.resolve();return;}
+        if(tries>=50){call.reject("Asistenta sa nepodarilo včas zastaviť.");return;}
+        main.postDelayed(() -> pollStop(call,tries+1),100);
+    }
     @PluginMethod public void setOptions(PluginCall call){ FeedbackProcessor p=DafForegroundService.processor; if(p!=null){Integer d=call.getInt("delay");Integer v=call.getInt("volume");if(d!=null)p.setDelay(d);if(v!=null)p.setVolume(v);}call.resolve(); }
     @PluginMethod public void status(PluginCall call){call.resolve(new JSObject().put("active",DafForegroundService.running).put("error",DafForegroundService.error));}
 }

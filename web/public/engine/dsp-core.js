@@ -375,7 +375,14 @@ function setupDafFafHeadphoneOutput() {
 }
 
 async function setupAudio() {
-  if (window.dafAssistant?.nativeActive) throw new Error("Pred cvičením s mikrofónom vypni DAF asistenta v oznámení alebo v aplikácii.");
+  if (window.dafAssistant?.nativeActive) {
+    if (typeof duoLesson === "undefined" || !duoLesson.conversation || duoLesson.conversation.miniActivity)
+      throw new Error("Pred cvičením s mikrofónom vypni DAF asistenta v oznámení alebo v aplikácii.");
+    // The conversation reuses one verified microphone stream for analysis and monitoring.
+    const assistant = window.dafAssistant;
+    assistant.nativeActive = false; assistant.isActive = false; assistant.updateUiState(false);
+    await assistant.nativePlugin.stop();
+  }
   if (audioSetupPromise) return audioSetupPromise;
   const generation = audioGeneration;
   audioSetupPromise = setupAudioOnce(generation).finally(() => {
@@ -396,10 +403,20 @@ async function setupAudioOnce(generation) {
   }
 
   if (!rawAnalyser) {
-    const stream = await getMicrophoneStream();
-    if (generation !== audioGeneration) {
-      stream.getTracks().forEach((track) => track.stop());
-      throw new Error("Audio relácia bola zrušená.");
+    const routePlugin = window.Capacitor?.getPlatform?.() === "android" && window.Capacitor?.isPluginAvailable?.("GlideDaf") ? window.Capacitor.Plugins.GlideDaf : null;
+    let stream;
+    let bluetooth = false;
+    try {
+      if (routePlugin) bluetooth = !!(await routePlugin.prepareExercise()).bluetooth;
+      if (generation !== audioGeneration) throw new Error("Audio relácia bola zrušená.");
+      stream = await getMicrophoneStream();
+      if (bluetooth) await routePlugin.verifyExercise();
+      if (generation !== audioGeneration) throw new Error("Audio relácia bola zrušená.");
+    } catch (error) {
+      stream?.getTracks().forEach(track => track.stop());
+      window.micStream = null;
+      if (routePlugin) await routePlugin.releaseExercise();
+      throw error;
     }
     window.micStream = stream;
     const src = audioCtx.createMediaStreamSource(stream);
@@ -429,6 +446,10 @@ async function setupAudioOnce(generation) {
 
     // ZAPOJENIE ŽIVÉHO DAF + FAF ODPOSLUCHU DO SLÚCHADIEL
     setupDafFafHeadphoneOutput(src, audioCtx);
+    if (bluetooth && typeof duoLesson !== "undefined" && duoLesson.conversation && !duoLesson.conversation.miniActivity) {
+      try { await window.dafAssistant.startConversationMonitor(); }
+      catch (error) { window.releaseGlideAudio(); throw error; }
+    }
   } else if (window.mediaStreamSource) {
     setupDafFafHeadphoneOutput(window.mediaStreamSource, audioCtx);
   }
@@ -445,6 +466,7 @@ window.releaseGlideAudio = function () {
   abortActiveDspSession();
   window.dafAssistant?.dispose();
   if (window.micStream) window.micStream.getTracks().forEach((track) => track.stop());
+  if (window.Capacitor?.isPluginAvailable?.("GlideDaf")) void window.Capacitor.Plugins.GlideDaf.releaseExercise();
   if (audioCtx && audioCtx.state !== "closed") audioCtx.close().catch(() => {});
   audioCtx = rawAnalyser = formantAnalyser = null;
   window.audioCtx = window.mediaStreamSource = window.micStream = null;
@@ -515,6 +537,7 @@ function playScenarioAudio(scenario, onDone) {
   }
 
   const audio = new Audio(scenario.audioUrl);
+  if (typeof duoLesson !== "undefined" && duoLesson.conversation) audio.volume = 0.7;
   activeAudioPlayer = audio;
   let finished = false;
   const finishOnce = () => {
@@ -529,6 +552,7 @@ function playScenarioAudio(scenario, onDone) {
       window.speechSynthesis.cancel();
       const utter = new SpeechSynthesisUtterance(scenario.promptText || scenario.fallbackPrompt);
       utter.lang = "sk-SK";
+      if (typeof duoLesson !== "undefined" && duoLesson.conversation) utter.volume = 0.7;
       utter.rate = scenario.voiceRate || 1.05;
       utter.pitch = scenario.voicePitch || 1.0;
       utter.onend = finishOnce;

@@ -874,6 +874,7 @@
       // 1. Ak máme reálne MP3 a nie je vynútená syntéza
       if (this.preferOriginalMp3 && question.audioUrl && !forceSynthesis) {
         const audio = new Audio(question.audioUrl);
+        if (typeof duoLesson !== "undefined" && duoLesson.conversation) audio.volume = 0.7;
         this.activeAudio = audio;
         audio.onended = finishOnce;
         let fallbackStarted = false;
@@ -911,6 +912,7 @@
           utter.lang = "sk-SK";
         }
 
+        if (typeof duoLesson !== "undefined" && duoLesson.conversation) utter.volume = 0.7;
         utter.pitch = question.voicePitch || (question.voiceGender === "female" ? 1.15 : 0.9);
         utter.rate = question.voiceRate || 1.05;
 

@@ -189,8 +189,8 @@
 
     }
 
-    async ensureAudioPipeline() {
-      if (typeof window.setupAudio === "function") {
+    async ensureAudioPipeline(useExisting = false) {
+      if (!useExisting && typeof window.setupAudio === "function") {
         await window.setupAudio();
         this.audioCtx = window.audioCtx;
         this.mediaStreamSource = window.mediaStreamSource;
@@ -430,6 +430,19 @@
       this.fafFilter.connect(this.fafVoiceGain);
 
       return this.fafVoiceGain;
+    }
+
+    // The exercise already owns the verified headset microphone; share its WebAudio stream.
+    async startConversationMonitor() {
+      if (this.isActive || this.nativeActive) return;
+      await this.ensureAudioPipeline(true);
+      if (!this.masterGain || !this.audioCtx || !this.limiter) throw new Error("Odposluch sa nepodarilo spustiť.");
+      this.masterGain.gain.cancelScheduledValues(this.audioCtx.currentTime);
+      this.masterGain.gain.setTargetAtTime(this.volumePercent / 100, this.audioCtx.currentTime, 0.02);
+      this.limiter.connect(this.audioCtx.destination);
+      this.isActive = true;
+      this.updateUiState(true);
+      this.startVisualPulse();
     }
 
     async start() {

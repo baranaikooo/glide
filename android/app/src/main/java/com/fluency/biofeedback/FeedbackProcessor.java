@@ -31,7 +31,7 @@ public final class FeedbackProcessor {
             float direct = read(d);
             float pitched = (float)(read(d + sampleRate * (.003 + grain * (1 - phase))) * Math.sin(Math.PI * phase)
                 + read(d + sampleRate * (.003 + grain * (1 - p2))) * Math.sin(Math.PI * p2));
-            float amplified = (direct * .5f + pitched * .35f) * 2.5f;
+            float amplified = (direct * .5f + pitched * .35f) * 5f;
             // Smooth limiter prevents hard clipping while giving quiet microphone signals more headroom.
             float value = amplified / (1f + Math.abs(amplified) / .75f) * gain;
             samples[i] = (short)(value * 32767);

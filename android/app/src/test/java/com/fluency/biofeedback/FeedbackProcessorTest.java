@@ -19,7 +19,7 @@ public class FeedbackProcessorTest {
     @Test public void quietSpeechIsAudibleWithoutExceedingLimit() {
         FeedbackProcessor p = new FeedbackProcessor(48000); p.setVolume(70);
         short[] audio = new short[48000]; java.util.Arrays.fill(audio, (short)1000); p.process(audio,audio.length);
-        assertTrue("quiet input should be boosted", Math.abs((int)audio[40000]) > 500);
+        assertTrue("quiet input should be boosted", Math.abs((int)audio[40000]) > 1800);
         for(short value:audio) assertTrue(Math.abs((int)value) <= 24576);
     }
     @Test public void stereoBluetoothPreferredButOnlyHeadphonesArePrivate() {

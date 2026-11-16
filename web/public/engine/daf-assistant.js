@@ -267,7 +267,7 @@
         this.limiter.release.setValueAtTime(0.05, now);
         // Boost only the headphone branch; raw DSP/calibration must stay unamplified.
         this.monitorBoost = this.audioCtx.createGain();
-        this.monitorBoost.gain.setValueAtTime(4, now);
+        this.monitorBoost.gain.setValueAtTime(8, now);
         this.monitorBoost.connect(this.limiter);
         this.limiter.connect(this.masterGain);
 

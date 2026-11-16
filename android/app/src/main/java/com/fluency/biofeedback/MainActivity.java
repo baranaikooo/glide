@@ -20,6 +20,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(GlideUpdatesPlugin.class);
         registerPlugin(GlideSpeechPlugin.class);
+        registerPlugin(GlideDafPlugin.class);
         registerPlugin(GlideAuthStoragePlugin.class);
         super.onCreate(savedInstanceState);
 

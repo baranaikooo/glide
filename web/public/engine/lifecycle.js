@@ -125,7 +125,7 @@
     }
     context.insertBefore(profile, context.querySelector(".questionnaire-note").closest('details'));
   }
-  const release = () => window.releaseGlideAudio?.();
+  const release = () => { if (!window.dafAssistant?.nativeActive && !(window.dafAssistant?.nativePlugin && window.dafAssistant?.starting)) window.releaseGlideAudio?.(); };
   document.querySelectorAll(".nav-tab").forEach((button) => {
     button.addEventListener("click", release);
   });
@@ -137,7 +137,7 @@
   assistant?.addEventListener("click", () => {
     if (!window.dafAssistant.isActive && !window.dafAssistant.starting) release();
   });
-  document.getElementById("btnLogout")?.addEventListener("click", release);
+  document.getElementById("btnLogout")?.addEventListener("click", () => window.releaseGlideAudio?.());
   let installation;
   const installButton = document.getElementById("pwaInstallBtn");
   window.addEventListener("beforeinstallprompt", (event) => {

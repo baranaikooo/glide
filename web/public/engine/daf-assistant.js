@@ -26,6 +26,8 @@
       this.volumePercent = 70;
       this.pitchSemitones = 2;
       this.starting = false;
+      this.nativeActive = false;
+      this.nativePlugin = window.Capacitor?.getPlatform?.() === "android" && window.Capacitor?.isPluginAvailable?.("GlideDaf") ? window.Capacitor.Plugins.GlideDaf : null;
       this.startGeneration = 0;
 
       this.audioCtx = null;
@@ -48,6 +50,12 @@
       this.animFrameId = null;
 
       this.initDom();
+      if (this.nativePlugin) {
+        document.addEventListener("visibilitychange", () => { if (!document.hidden) this.syncNativeStatus(); });
+        if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => this.syncNativeStatus());
+        else void this.syncNativeStatus();
+        setInterval(() => { if (!document.hidden && this.nativeActive) void this.syncNativeStatus(); }, 2000);
+      }
     }
 
     initDom() {
@@ -129,26 +137,6 @@
         handleVolInput();
       }
 
-      // 3.5. FAF Zmena výšky hlasu (Pitch Shift slider -4..+4 st)
-      const pitchSlider = document.getElementById("assistantPitchSlider");
-      const pitchValEl = document.getElementById("assistantPitchVal");
-      if (pitchSlider) {
-        const handlePitchInput = () => {
-          const val = parseInt(pitchSlider.value, 10);
-          this.setPitch(val);
-          if (pitchValEl) pitchValEl.textContent = `${val > 0 ? "+" : ""}${val} st`;
-          updateRulerActive("pitchRuler", val, 0);
-
-          const min = parseInt(pitchSlider.min || "-4", 10);
-          const max = parseInt(pitchSlider.max || "4", 10);
-          const pct = ((val - min) / (max - min)) * 100;
-          pitchSlider.style.background = `linear-gradient(to right, var(--duo-purple) 0%, var(--duo-purple) ${pct}%, #e6e2ef ${pct}%, #e6e2ef 100%)`;
-        };
-
-        pitchSlider.addEventListener("input", handlePitchInput);
-        handlePitchInput();
-      }
-
       // 4. Klikateľné značky stupnice
       const delayRuler = document.getElementById("delayRuler");
       if (delayRuler && delaySlider && delayRuler.querySelectorAll) {
@@ -198,29 +186,7 @@
         }
       }
 
-      const pitchRuler = document.getElementById("pitchRuler");
-      if (pitchRuler && pitchSlider && pitchRuler.querySelectorAll) {
-        const pMarks = pitchRuler.querySelectorAll(".ruler-mark");
-        if (pMarks && pMarks.forEach) {
-          pMarks.forEach((mark) => {
-            mark.addEventListener("click", () => {
-              const rawVal = mark.dataset
-                ? mark.dataset.val
-                : mark.getAttribute
-                  ? mark.getAttribute("data-val")
-                  : null;
-              const snapVal = parseInt(rawVal, 10);
-              if (!isNaN(snapVal)) {
-                pitchSlider.value = snapVal;
-                pitchSlider.dispatchEvent(new Event("input"));
-                if (typeof duoSfx !== "undefined" && duoSfx.playTone) {
-                  duoSfx.playTone(820, "sine", 0.04, 0.08);
-                }
-              }
-            });
-          });
-        }
-      }
+
     }
 
     async ensureAudioPipeline() {
@@ -477,6 +443,12 @@
       const generation = ++this.startGeneration;
       this.starting = true;
       try {
+        if (this.nativePlugin) {
+          await this.nativePlugin.start({ delay: this.delayMs, volume: this.volumePercent });
+          if (generation !== this.startGeneration) { await this.nativePlugin.stop(); return; }
+          this.nativeActive = true; this.isActive = true; this.updateUiState(true);
+          return;
+        }
         await this.ensureAudioPipeline();
         if (generation !== this.startGeneration) {
           window.releaseGlideAudio?.();
@@ -509,7 +481,7 @@
       } catch (err) {
         console.error("DAF Assistant activation error:", err);
         window.releaseGlideAudio?.();
-        alert("Nepodarilo sa spustiť asistenta. Skontroluj prístup k mikrofónu v prehliadači.");
+        alert(err?.message || "Nepodarilo sa spustiť asistenta. Skontroluj prístup k mikrofónu a slúchadlá.");
         this.updateUiState(false);
       } finally {
         this.starting = false;
@@ -519,6 +491,7 @@
     stop() {
       this.startGeneration++;
       this.isActive = false;
+      if (this.nativeActive) { this.nativeActive = false; void this.nativePlugin.stop(); }
 
       // Plynulé odpojenie z výstupu do slúchadiel
       if (this.masterGain && this.audioCtx) {
@@ -547,6 +520,7 @@
 
     setDelay(ms) {
       this.delayMs = Math.max(40, Math.min(140, ms));
+      if (this.nativeActive) void this.nativePlugin.setOptions({ delay: this.delayMs });
       if (this.audioCtx && this.delayNodeA) {
         const now = this.audioCtx.currentTime;
         this.delayNodeA.delayTime.cancelScheduledValues(now);
@@ -556,10 +530,16 @@
 
     setVolume(percent) {
       this.volumePercent = Math.max(0, Math.min(100, percent));
+      if (this.nativeActive) void this.nativePlugin.setOptions({ volume: this.volumePercent });
       if (this.masterGain && this.audioCtx && this.isActive) {
         this.masterGain.gain.cancelScheduledValues(this.audioCtx.currentTime);
         this.masterGain.gain.setValueAtTime(this.volumePercent / 100, this.audioCtx.currentTime);
       }
+    }
+
+    async syncNativeStatus() {
+      if (!this.nativePlugin || this.starting) return;
+      try { const wasActive = this.nativeActive; const status = await this.nativePlugin.status(); this.nativeActive = !!status.active; this.isActive = !!status.active; this.updateUiState(this.isActive); if (wasActive && !this.isActive && status.error) { const message = document.getElementById("assistantPulseStatus"); if (message) message.textContent = status.error; } } catch (_) {}
     }
 
     updateUiState(active) {
@@ -596,7 +576,7 @@
 
       if (pulseStatus) {
         pulseStatus.textContent = active
-          ? "🎧 Živý odposluch so zborovým efektom je aktívny v slúchadle"
+          ? (this.nativeActive ? "🎧 Odposluch beží aj na pozadí. Vypneš ho aj v oznámení." : "🎧 Živý odposluch je aktívny v slúchadle")
           : "Asistent je pripravený";
       }
     }

@@ -375,6 +375,7 @@ function setupDafFafHeadphoneOutput() {
 }
 
 async function setupAudio() {
+  if (window.dafAssistant?.nativeActive) throw new Error("Pred cvičením s mikrofónom vypni DAF asistenta v oznámení alebo v aplikácii.");
   if (audioSetupPromise) return audioSetupPromise;
   const generation = audioGeneration;
   audioSetupPromise = setupAudioOnce(generation).finally(() => {
@@ -732,6 +733,7 @@ if (startBtn) {
     } catch (e) {
       startBtn.disabled = false;
       console.warn("Audio setup/kalibrácia error:", e);
+      if (statusAlert && e?.message) statusAlert.textContent = e.message;
       return;
     }
 

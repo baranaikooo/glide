@@ -34,7 +34,7 @@ test('home, drill and assistant primary screens fit a typical phone', async ({ p
     expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1)).toBe(true);
   }
   await expect(page.locator('#assistantToggle')).toBeInViewport();
-  await expect(page.locator('#assistantPitchSlider')).toBeInViewport();
+  await expect(page.locator('#assistantPitchSlider')).toHaveCount(0);
 });
 test('chapter switching keeps every chapter and level accessible without a long page', async ({ page }) => {
   await open(page);

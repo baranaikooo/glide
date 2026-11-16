@@ -7,13 +7,13 @@ public final class FeedbackProcessor {
     private int position;
     private double phase;
     private volatile int delayMs = 70;
-    private volatile float volume = .35f;
+    private volatile float volume = .70f;
     private final double shift = Math.pow(2, 2.0 / 12.0);
     private final double grain = .04;
 
     public FeedbackProcessor(int rate) { sampleRate = rate; ring = new float[rate]; }
     public void setDelay(int ms) { delayMs = Math.max(40, Math.min(140, ms)); }
-    public void setVolume(int percent) { volume = Math.max(0, Math.min(100, percent)) / 200f; }
+    public void setVolume(int percent) { volume = Math.max(0, Math.min(100, percent)) / 100f; }
     private float read(double delay) {
         double pos = position - delay;
         while (pos < 0) pos += ring.length;
@@ -29,8 +29,9 @@ public final class FeedbackProcessor {
             float direct = read(d);
             float pitched = (float)(read(d + sampleRate * (.003 + grain * (1 - phase))) * Math.sin(Math.PI * phase)
                 + read(d + sampleRate * (.003 + grain * (1 - p2))) * Math.sin(Math.PI * p2));
-            float value = (direct * .5f + pitched * .35f) * gain;
-            value = Math.max(-.75f, Math.min(.75f, value));
+            float amplified = (direct * .5f + pitched * .35f) * gain * 2.5f;
+            // Smooth limiter prevents hard clipping while giving quiet microphone signals more headroom.
+            float value = amplified / (1f + Math.abs(amplified) / .75f);
             samples[i] = (short)(value * 32767);
             position = (position + 1) % ring.length;
             phase = (phase + (shift - 1) / (grain * sampleRate)) % 1.0;

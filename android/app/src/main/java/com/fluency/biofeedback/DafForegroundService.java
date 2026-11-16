@@ -26,13 +26,16 @@ public final class DafForegroundService extends Service {
     private PowerManager.WakeLock wakeLock;
 
     static AudioDeviceInfo headphones(AudioManager manager) {
-        for (AudioDeviceInfo d : manager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
-            int t = d.getType();
-            if (t == AudioDeviceInfo.TYPE_WIRED_HEADPHONES || t == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
-                t == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || t == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
-                t == AudioDeviceInfo.TYPE_USB_HEADSET || (Build.VERSION.SDK_INT >= 31 && t == AudioDeviceInfo.TYPE_BLE_HEADSET)) return d;
+        AudioDeviceInfo best = null;
+        int bestPriority = 0;
+        for (AudioDeviceInfo device : manager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
+            int priority = HeadphoneRoutePolicy.priority(device.getType(), Build.VERSION.SDK_INT);
+            if (priority > bestPriority) { best = device; bestPriority = priority; }
         }
-        return null;
+        return best;
+    }
+    private static boolean isHeadphone(AudioDeviceInfo device) {
+        return device != null && HeadphoneRoutePolicy.isHeadphone(device.getType(), Build.VERSION.SDK_INT);
     }
     @Override public void onCreate() { super.onCreate(); audioManager=(AudioManager)getSystemService(AUDIO_SERVICE); }
     @Override public int onStartCommand(Intent intent, int flags, int id) {
@@ -54,7 +57,7 @@ public final class DafForegroundService extends Service {
             else startForeground(43,notification);
             int delay=intent.getIntExtra("delay",70), volume=intent.getIntExtra("volume",70);
             stopping=false;
-            deviceCallback=new AudioDeviceCallback(){ @Override public void onAudioDevicesRemoved(AudioDeviceInfo[] devices){ for(AudioDeviceInfo removed:devices) if(removed.getId()==route.getId()){ error="Slúchadlá boli odpojené."; stopSelf(); return; } }};
+            deviceCallback=new AudioDeviceCallback(){ @Override public void onAudioDevicesRemoved(AudioDeviceInfo[] devices){ if(headphones(audioManager)==null){ error="Slúchadlá boli odpojené."; stopSelf(); } }};
             audioManager.registerAudioDeviceCallback(deviceCallback,new Handler(Looper.getMainLooper()));
             PowerManager power=(PowerManager)getSystemService(POWER_SERVICE);
             wakeLock=power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"Glide:DAF"); wakeLock.acquire();
@@ -71,7 +74,8 @@ public final class DafForegroundService extends Service {
             if(inputMin<=0||outputMin<=0) throw new IllegalStateException("Zvukové zariadenie nepodporuje odposluch.");
             recorder=new AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION,rate,AudioFormat.CHANNEL_IN_MONO,AudioFormat.ENCODING_PCM_16BIT,Math.max(inputMin,chunk*4));
             output=new AudioTrack.Builder().setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()).setAudioFormat(new AudioFormat.Builder().setSampleRate(rate).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build()).setBufferSizeInBytes(Math.max(outputMin,chunk*4)).setTransferMode(AudioTrack.MODE_STREAM).build();
-            if(recorder.getState()!=AudioRecord.STATE_INITIALIZED || output.getState()!=AudioTrack.STATE_INITIALIZED || !output.setPreferredDevice(route)) throw new IllegalStateException("Nepodarilo sa pripojiť slúchadlá.");
+            if(recorder.getState()!=AudioRecord.STATE_INITIALIZED || output.getState()!=AudioTrack.STATE_INITIALIZED) throw new IllegalStateException("Nepodarilo sa pripojiť slúchadlá.");
+            output.setPreferredDevice(route);
             processor=new FeedbackProcessor(rate); processor.setDelay(delay); processor.setVolume(volume);
             recorder.startRecording(); output.play();
             if(recorder.getRecordingState()!=AudioRecord.RECORDSTATE_RECORDING) throw new IllegalStateException("Mikrofón sa nepodarilo spustiť.");
@@ -79,19 +83,26 @@ public final class DafForegroundService extends Service {
             short[] samples=new short[chunk];
             for(int attempt=0;attempt<100 && !stopping;attempt++){
                 AudioDeviceInfo connected=output.getRoutedDevice();
-                if(connected!=null && connected.getId()==route.getId())break;
+                if(isHeadphone(connected))break;
                 if(connected!=null)throw new IllegalStateException("Zvuk nesmeruje do slúchadiel.");
                 if(output.write(samples,0,samples.length)<=0)throw new IllegalStateException("Prehrávanie bolo prerušené.");
                 if(attempt==99)throw new IllegalStateException("Nepodarilo sa overiť pripojenie slúchadiel.");
             }
             if(stopping)return;
             starting=false; running=true;
+            int missingRouteFrames=0;
+            short[] silence=new short[chunk];
             while(!stopping){
                 int count=recorder.read(samples,0,samples.length);
                 if(count<=0) throw new IllegalStateException("Mikrofón prestal pracovať.");
                 AudioDeviceInfo current=output.getRoutedDevice();
-                if(current == null) continue;
-                if(current.getId()!=route.getId()) throw new IllegalStateException("Slúchadlá boli odpojené.");
+                if(current == null) {
+                    if(headphones(audioManager)==null || ++missingRouteFrames > 150) throw new IllegalStateException("Slúchadlá boli odpojené.");
+                    if(output.write(silence,0,silence.length)<=0) throw new IllegalStateException("Prehrávanie bolo prerušené.");
+                    continue;
+                }
+                if(!isHeadphone(current)) throw new IllegalStateException("Zvuk nesmeruje do slúchadiel.");
+                missingRouteFrames=0;
                 processor.process(samples,count);
                 int written=0;
                 while(written<count && !stopping){int n=output.write(samples,written,count-written);if(n<=0)throw new IllegalStateException("Prehrávanie bolo prerušené.");written+=n;}

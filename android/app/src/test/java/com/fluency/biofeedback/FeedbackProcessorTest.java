@@ -16,4 +16,16 @@ public class FeedbackProcessorTest {
         FeedbackProcessor p=new FeedbackProcessor(48000);p.setVolume(100);p.process(s,s.length);
         assertTrue(magnitude(s,440*Math.pow(2,2.0/12))>2*magnitude(s,520));
     }
+    @Test public void quietSpeechIsAudibleWithoutExceedingLimit() {
+        FeedbackProcessor p = new FeedbackProcessor(48000); p.setVolume(70);
+        short[] audio = new short[48000]; java.util.Arrays.fill(audio, (short)1000); p.process(audio,audio.length);
+        assertTrue("quiet input should be boosted", Math.abs((int)audio[40000]) > 500);
+        for(short value:audio) assertTrue(Math.abs((int)value) <= 24576);
+    }
+    @Test public void stereoBluetoothPreferredButOnlyHeadphonesArePrivate() {
+        assertTrue(HeadphoneRoutePolicy.priority(android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, 33) > HeadphoneRoutePolicy.priority(android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO, 33));
+        assertTrue(HeadphoneRoutePolicy.isHeadphone(android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, 33));
+        assertTrue(HeadphoneRoutePolicy.isHeadphone(android.media.AudioDeviceInfo.TYPE_BLE_HEADSET, 33));
+        assertFalse(HeadphoneRoutePolicy.isHeadphone(android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER, 33));
+    }
 }

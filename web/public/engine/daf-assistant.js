@@ -27,6 +27,9 @@
       this.pitchSemitones = 2;
       this.starting = false;
       this.nativeActive = false;
+      this.nativeOptionsPending = null;
+      this.nativeOptionsInFlight = false;
+      this.nativeOptionsRevision = 0;
       this.nativePlugin = window.Capacitor?.getPlatform?.() === "android" && window.Capacitor?.isPluginAvailable?.("GlideDaf") ? window.Capacitor.Plugins.GlideDaf : null;
       this.startGeneration = 0;
 
@@ -265,8 +268,8 @@
         // Boost only the headphone branch; raw DSP/calibration must stay unamplified.
         this.monitorBoost = this.audioCtx.createGain();
         this.monitorBoost.gain.setValueAtTime(4, now);
-        this.masterGain.connect(this.monitorBoost);
         this.monitorBoost.connect(this.limiter);
+        this.limiter.connect(this.masterGain);
 
         // Analyser pre vizuálny pulz v reálnom čase
         this.dafAnalyser = this.audioCtx.createAnalyser();
@@ -276,10 +279,10 @@
         // Prepojenie Voice A (DAF)
         this.mediaStreamSource.connect(this.delayNodeA);
         this.delayNodeA.connect(this.directGain);
-        this.directGain.connect(this.masterGain);
+        this.directGain.connect(this.monitorBoost);
 
         // Prepojenie Voice B (FAF)
-        fafVoiceGain.connect(this.masterGain);
+        fafVoiceGain.connect(this.monitorBoost);
 
         // Prepojenie na Analyser pre vizualizáciu
         this.masterGain.connect(this.dafAnalyser);
@@ -439,7 +442,7 @@
       if (!this.masterGain || !this.audioCtx || !this.limiter) throw new Error("Odposluch sa nepodarilo spustiť.");
       this.masterGain.gain.cancelScheduledValues(this.audioCtx.currentTime);
       this.masterGain.gain.setTargetAtTime(this.volumePercent / 100, this.audioCtx.currentTime, 0.02);
-      this.limiter.connect(this.audioCtx.destination);
+      this.masterGain.connect(this.audioCtx.destination);
       this.isActive = true;
       this.updateUiState(true);
       this.startVisualPulse();
@@ -480,7 +483,7 @@
             this.audioCtx.currentTime,
             0.02,
           );
-          this.limiter.connect(this.audioCtx.destination);
+          this.masterGain.connect(this.audioCtx.destination);
         }
 
         this.isActive = true;
@@ -504,6 +507,7 @@
     stop() {
       this.startGeneration++;
       this.isActive = false;
+      this.nativeOptionsPending = null;
       if (this.nativeActive) { this.nativeActive = false; void this.nativePlugin.stop(); }
 
       // Plynulé odpojenie z výstupu do slúchadiel
@@ -511,7 +515,7 @@
         try {
           this.masterGain.gain.cancelScheduledValues(this.audioCtx.currentTime);
           this.masterGain.gain.setValueAtTime(0.0, this.audioCtx.currentTime);
-          this.limiter.disconnect(this.audioCtx.destination);
+          this.masterGain.disconnect(this.audioCtx.destination);
         } catch (_) {}
       }
 
@@ -533,7 +537,7 @@
 
     setDelay(ms) {
       this.delayMs = Math.max(40, Math.min(140, ms));
-      if (this.nativeActive) void this.nativePlugin.setOptions({ delay: this.delayMs });
+      if (this.nativeActive) this.queueNativeOptions({ delay: this.delayMs });
       if (this.audioCtx && this.delayNodeA) {
         const now = this.audioCtx.currentTime;
         this.delayNodeA.delayTime.cancelScheduledValues(now);
@@ -543,16 +547,34 @@
 
     setVolume(percent) {
       this.volumePercent = Math.max(0, Math.min(100, percent));
-      if (this.nativeActive) void this.nativePlugin.setOptions({ volume: this.volumePercent });
+      if (this.nativeActive) this.queueNativeOptions({ volume: this.volumePercent });
       if (this.masterGain && this.audioCtx && this.isActive) {
         this.masterGain.gain.cancelScheduledValues(this.audioCtx.currentTime);
         this.masterGain.gain.setValueAtTime(this.volumePercent / 100, this.audioCtx.currentTime);
       }
     }
 
+    queueNativeOptions(options) {
+      this.nativeOptionsRevision++;
+      this.nativeOptionsPending = { ...this.nativeOptionsPending, ...options };
+      if (this.nativeOptionsInFlight) return;
+      this.nativeOptionsInFlight = true;
+      (async () => {
+        while (this.nativeActive && this.nativeOptionsPending) {
+          const next = this.nativeOptionsPending;
+          this.nativeOptionsPending = null;
+          await this.nativePlugin.setOptions(next);
+        }
+      })().catch(() => {
+        this.nativeOptionsPending = null;
+        const message = document.getElementById("assistantPulseStatus");
+        if (message) message.textContent = "Nastavenie sa nepodarilo zmeniť. Skús asistenta znova zapnúť.";
+      }).finally(() => { this.nativeOptionsInFlight = false; if (this.nativeActive && this.nativeOptionsPending) this.queueNativeOptions({}); });
+    }
+
     async syncNativeStatus() {
       if (!this.nativePlugin || this.starting) return;
-      try { const wasActive = this.nativeActive; const status = await this.nativePlugin.status(); this.nativeActive = !!status.active; this.isActive = !!status.active; this.updateUiState(this.isActive); if (wasActive && !this.isActive && status.error) { const message = document.getElementById("assistantPulseStatus"); if (message) message.textContent = status.error; } } catch (_) {}
+      try { const revision = this.nativeOptionsRevision; const wasActive = this.nativeActive; const status = await this.nativePlugin.status(); this.nativeActive = !!status.active; this.isActive = !!status.active; this.updateUiState(this.isActive); if (this.isActive && revision === this.nativeOptionsRevision && !this.nativeOptionsInFlight && !this.nativeOptionsPending) { for (const [key, id, suffix] of [["delay", "assistantDelay", " ms"], ["volume", "assistantVol", " %"]]) { if (Number.isFinite(status[key])) { const slider = document.getElementById(id + "Slider"), label = document.getElementById(id + "Val"); if (slider) { slider.value = status[key]; const pct = key === "delay" ? status[key] - 40 : status[key]; slider.style.background = `linear-gradient(to right, var(--duo-blue) 0%, var(--duo-blue) ${pct}%, #e6e2ef ${pct}%, #e6e2ef 100%)`; const ruler = document.getElementById(key === "delay" ? "delayRuler" : "volRuler"); ruler?.querySelectorAll(".ruler-mark").forEach(mark => mark.classList.toggle("active", Math.abs(Number(mark.dataset.val) - status[key]) <= (key === "delay" ? 3 : 2))); } if (label) label.textContent = status[key] + suffix; if (key === "delay") this.delayMs = status[key]; else this.volumePercent = status[key]; } } } if (wasActive && !this.isActive && status.error) { const message = document.getElementById("assistantPulseStatus"); if (message) message.textContent = status.error; } } catch (_) {}
     }
 
     updateUiState(active) {

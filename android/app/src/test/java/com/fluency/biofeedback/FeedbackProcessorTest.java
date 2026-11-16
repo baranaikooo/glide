@@ -28,4 +28,13 @@ public class FeedbackProcessorTest {
         assertTrue(HeadphoneRoutePolicy.isHeadphone(android.media.AudioDeviceInfo.TYPE_BLE_HEADSET, 33));
         assertFalse(HeadphoneRoutePolicy.isHeadphone(android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER, 33));
     }
+    @Test public void volumeRemainsProportionalForLoudSignals() {
+        short[] full=new short[48000],quiet=new short[48000];
+        java.util.Arrays.fill(full,Short.MAX_VALUE);java.util.Arrays.fill(quiet,Short.MAX_VALUE);
+        FeedbackProcessor a=new FeedbackProcessor(48000),b=new FeedbackProcessor(48000);
+        a.setVolume(100);b.setVolume(25);a.process(full,full.length);b.process(quiet,quiet.length);
+        assertTrue(Math.abs(full[40000])>1000);
+        assertEquals(Math.abs(full[40000])*.25,Math.abs(quiet[40000]),2);
+        assertEquals(25,b.getVolume());assertEquals(70,b.getDelay());
+    }
 }

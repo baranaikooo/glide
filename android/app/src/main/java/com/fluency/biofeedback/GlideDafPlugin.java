@@ -84,6 +84,6 @@ public class GlideDafPlugin extends Plugin {
         if(tries>=50){call.reject("Asistenta sa nepodarilo včas zastaviť.");return;}
         main.postDelayed(() -> pollStop(call,tries+1),100);
     }
-    @PluginMethod public void setOptions(PluginCall call){ FeedbackProcessor p=DafForegroundService.processor; if(p!=null){Integer d=call.getInt("delay");Integer v=call.getInt("volume");if(d!=null)p.setDelay(d);if(v!=null)p.setVolume(v);}call.resolve(); }
-    @PluginMethod public void status(PluginCall call){call.resolve(new JSObject().put("active",DafForegroundService.running).put("error",DafForegroundService.error));}
+    @PluginMethod public void setOptions(PluginCall call){ FeedbackProcessor p=DafForegroundService.processor; if(p==null || !DafForegroundService.running){call.reject("Asistent nie je aktívny.");return;} Integer d=call.getInt("delay");Integer v=call.getInt("volume");if(d!=null)p.setDelay(d);if(v!=null)p.setVolume(v);call.resolve(); }
+    @PluginMethod public void status(PluginCall call){ FeedbackProcessor p=DafForegroundService.processor; JSObject result=new JSObject().put("active",DafForegroundService.running).put("error",DafForegroundService.error); if(p!=null){result.put("delay",p.getDelay());result.put("volume",p.getVolume());} call.resolve(result); }
 }

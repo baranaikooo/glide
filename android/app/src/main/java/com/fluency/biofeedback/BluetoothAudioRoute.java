@@ -39,7 +39,10 @@ public final class BluetoothAudioRoute implements AutoCloseable {
             for(AudioDeviceInfo candidate:audio.getAvailableCommunicationDevices()) {
                 if(isBluetoothMic(candidate)){target=candidate;break;}
             }
-            if(target==null || !audio.setCommunicationDevice(target)) throw new IllegalStateException("Mikrofón slúchadiel nie je dostupný. Skontroluj povolenie telefonovania pri slúchadlách v Bluetooth nastaveniach.");
+            synchronized(this) {
+                if(closed) throw new IllegalStateException("Zvuková relácia bola zrušená.");
+                if(target==null || !audio.setCommunicationDevice(target)) throw new IllegalStateException("Mikrofón slúchadiel nie je dostupný. Skontroluj povolenie telefonovania pri slúchadlách v Bluetooth nastaveniach.");
+            }
             for(int n=0;n<100 && !closed;n++) {
                 AudioDeviceInfo selected=audio.getCommunicationDevice();
                 if(selected!=null && selected.getId()==target.getId())return selected;
@@ -52,7 +55,10 @@ public final class BluetoothAudioRoute implements AutoCloseable {
         Intent last=context.registerReceiver(receiver,new IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED));
         try {
             if(last!=null && last.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE,-1)==AudioManager.SCO_AUDIO_STATE_CONNECTED)connected.countDown();
-            audio.startBluetoothSco();
+            synchronized(this) {
+                if(closed) throw new IllegalStateException("Zvuková relácia bola zrušená.");
+                audio.startBluetoothSco();
+            }
             for(int n=0;n<100 && !closed;n++)if(connected.await(100,TimeUnit.MILLISECONDS))return null;
             throw new IllegalStateException("Nepodarilo sa pripojiť mikrofón slúchadiel.");
         } finally { context.unregisterReceiver(receiver); }
